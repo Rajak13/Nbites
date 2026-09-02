@@ -10,322 +10,301 @@ import {
   Check,
   Star,
   Clock,
-  ArrowUpRight,
-  User,
+  ArrowRight,
 } from 'lucide-react';
 
 interface DishItem {
   id: number;
+  category: string;
   name: string;
   price: string;
   image: string;
   prepTime: string;
+  restaurant: string;
 }
+
+const CATEGORIES = [
+  'ALL',
+  'MOMOS & DUMPLINGS',
+  'SMASH BURGERS',
+  'WOOD-FIRED PIZZA',
+  'CRISPY BITES',
+];
 
 const DISHES: DishItem[] = [
   {
     id: 1,
+    category: 'MOMOS & DUMPLINGS',
     name: 'Himalayan Steamed Buff Momo',
     price: 'Rs. 320',
     image: '/foods/main.jpg',
-    prepTime: '12 Mins',
+    prepTime: '12 MINS',
+    restaurant: 'Everest Kitchen • Lazimpat',
   },
   {
     id: 2,
+    category: 'MOMOS & DUMPLINGS',
     name: 'Crispy Pan-Seared Kothey',
     price: 'Rs. 360',
     image: '/foods/1.jpg',
-    prepTime: '14 Mins',
+    prepTime: '14 MINS',
+    restaurant: 'Kathmandu Dumpling Co. • Patan',
   },
   {
     id: 3,
+    category: 'SMASH BURGERS',
     name: 'Double Smash Timur Burger',
     price: 'Rs. 480',
     image: '/foods/2.jpg',
-    prepTime: '15 Mins',
+    prepTime: '15 MINS',
+    restaurant: 'The Sizzle House • Jhamsikhel',
   },
   {
     id: 4,
-    name: 'Wood-Fired Sourdough Pizza',
+    category: 'WOOD-FIRED PIZZA',
+    name: 'Artisan Pepperoni Sourdough',
     price: 'Rs. 750',
     image: '/foods/3.jpg',
-    prepTime: '18 Mins',
+    prepTime: '18 MINS',
+    restaurant: 'Fire & Dough • Baluwatar',
   },
   {
     id: 5,
+    category: 'CRISPY BITES',
     name: 'Mountain Spiced Fried Crunch',
     price: 'Rs. 420',
     image: '/foods/4.jpg',
-    prepTime: '11 Mins',
+    prepTime: '11 MINS',
+    restaurant: 'Golden Bird Kitchen • Thamel',
   },
 ];
 
 export function ChefTurntableSection() {
+  const [activeCategory, setActiveCategory] = React.useState('ALL');
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [addedDishId, setAddedDishId] = React.useState<number | null>(null);
 
-  const activeDish = DISHES[activeIndex];
+  // Filtered list based on active category
+  const filteredDishes = React.useMemo(() => {
+    if (activeCategory === 'ALL') return DISHES;
+    return DISHES.filter((d) => d.category === activeCategory);
+  }, [activeCategory]);
+
+  // Reset activeIndex if it exceeds filtered length
+  React.useEffect(() => {
+    setActiveIndex(0);
+  }, [activeCategory]);
+
+  const activeDish = filteredDishes[activeIndex % filteredDishes.length] || DISHES[0];
 
   const handleNext = () => {
-    setActiveIndex((prev) => (prev + 1) % DISHES.length);
+    setActiveIndex((prev) => (prev + 1) % filteredDishes.length);
   };
 
   const handlePrev = () => {
-    setActiveIndex((prev) => (prev - 1 + DISHES.length) % DISHES.length);
+    setActiveIndex((prev) => (prev - 1 + filteredDishes.length) % filteredDishes.length);
   };
 
-  const handleAddToOrder = (id: number) => {
+  const handleQuickAdd = (id: number) => {
     setAddedDishId(id);
     setTimeout(() => {
       setAddedDishId(null);
     }, 1500);
   };
 
-  // Get next 3 upcoming items for perspective trail
+  // Helper for upcoming trail items
   const getUpcomingDish = (offset: number) => {
-    return DISHES[(activeIndex + offset) % DISHES.length];
+    return filteredDishes[(activeIndex + offset) % filteredDishes.length];
   };
 
   return (
-    <section className="relative w-full bg-[#080808] text-[#f5f5f0] py-24 lg:py-32 px-6 md:px-12 lg:px-16 overflow-hidden select-none">
-      <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center min-h-[560px]">
+    <section className="relative w-full bg-[#f5e3cd] text-[#18120e] border-t-[3px] border-[#18120e] pt-14 pb-12 px-6 md:px-12 lg:px-16 select-none overflow-hidden">
+      <div className="max-w-[1440px] mx-auto space-y-10">
         
-        {/* LEFT COLUMN: Clean Minimal Headline & CTA */}
-        <div className="lg:col-span-5 flex flex-col justify-between h-full space-y-8 text-left z-20">
+        {/* 1. SECTION HEADER (Top-aligned, full-width baseline) */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-6 border-b-[2px] border-[#18120e]">
           
-          <div className="space-y-4">
+          {/* Left Title & Label */}
+          <div className="space-y-1.5 text-left">
+            <div className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-[#7a6e65]">
+              SECTION 02 // LIVE DISPATCH SELECTIONS
+            </div>
             <h2
-              className="text-5xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.02]"
+              className="text-2xl sm:text-3xl lg:text-[32px] font-black text-[#18120e] tracking-tight leading-tight"
               style={{ fontFamily: 'var(--font-clubstone), "Inter Display", sans-serif' }}
             >
-              Order Your <span className="text-[#f91814]">Favorite</span> Foods
+              Explore Today&apos;s Top Kitchen Deliveries
             </h2>
-
-            <p
-              className="text-base sm:text-lg text-[#8c8c8c] font-medium leading-relaxed max-w-sm pt-1"
-              style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
-            >
-              Enjoy fresh, delicious meals delivered to you in minutes, all through our easy-to-use platform across Nepal.
-            </p>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-4 pt-4">
-              <Link href="/discovery">
-                <button className="px-8 py-3.5 bg-[#f91814] text-white text-sm sm:text-base font-bold uppercase tracking-wider rounded-full hover:bg-white hover:text-[#18120e] hover:shadow-[0_0_20px_rgba(249,24,20,0.4)] transition-all duration-200 cursor-pointer">
-                  View Menu
-                </button>
-              </Link>
-
-              <Link href="#order">
-                <button className="px-8 py-3.5 bg-transparent border border-zinc-700 text-white text-sm sm:text-base font-bold uppercase tracking-wider rounded-full hover:border-white hover:bg-white/10 transition-all duration-200 cursor-pointer">
-                  Order Now
-                </button>
-              </Link>
-            </div>
           </div>
 
-          {/* Swirl Doodle Arrow */}
-          <div className="hidden sm:block py-2">
-            <svg
-              width="80"
-              height="80"
-              viewBox="0 0 100 100"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="text-white/80"
-            >
-              <path
-                d="M20 70 C 35 85, 45 40, 60 65 C 70 75, 78 45, 82 25"
-                stroke="currentColor"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M68 24 L 84 24 L 84 40"
-                stroke="currentColor"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-
-          {/* Bottom Review Counter */}
-          <div className="flex items-center gap-4 pt-2">
-            <div>
-              <div className="font-mono text-xs text-[#a3a3a3] uppercase tracking-wider font-bold">
-                4.95 / 5.0 ★
-              </div>
-              <div className="text-2xl font-black text-white font-mono mt-0.5">
-                12,400+
-              </div>
-              <div className="text-xs font-mono text-[#737373] uppercase tracking-widest">
-                Happy Foodies
-              </div>
-            </div>
-
-            {/* Avatar Stack */}
-            <div className="flex -space-x-2.5 overflow-hidden pl-2">
-              <div className="w-9 h-9 rounded-full bg-zinc-800 border-2 border-[#080808] flex items-center justify-center text-zinc-300">
-                <User className="w-4 h-4" />
-              </div>
-              <div className="w-9 h-9 rounded-full bg-zinc-700 border-2 border-[#080808] flex items-center justify-center text-zinc-200">
-                <User className="w-4 h-4" />
-              </div>
-              <div className="w-9 h-9 rounded-full bg-[#f91814] border-2 border-[#080808] flex items-center justify-center text-white font-bold text-xs">
-                +9K
-              </div>
-            </div>
+          {/* Right Filter Chips Row */}
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1 scrollbar-none">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-3.5 py-1.5 sm:px-4 sm:py-2 font-mono text-xs sm:text-sm font-bold uppercase tracking-wider transition-all cursor-pointer rounded-none border-2 border-[#18120e] shrink-0 ${
+                  activeCategory === cat
+                    ? 'bg-[#f91814] text-white shadow-[3px_3px_0px_0px_#18120e]'
+                    : 'bg-white text-[#18120e] hover:bg-[#f5e3cd] hover:shadow-[2px_2px_0px_0px_#18120e]'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
 
         </div>
 
-        {/* RIGHT COLUMN: The Floating Dish Spotlight & Perspective Trail */}
-        <div className="lg:col-span-7 flex flex-col justify-between h-full relative">
+        {/* 2. INTERACTIVE DEPTH CAROUSEL DECK (Central Interactive Area) */}
+        <div className="relative w-full py-6 sm:py-10 flex items-center justify-center min-h-[460px]">
           
-          <div className="relative w-full flex items-center justify-center min-h-[420px] sm:min-h-[460px]">
+          {/* Main Stage Grid: Chevrons flanking the Dish + Depth Trail */}
+          <div className="w-full flex items-center justify-between gap-4 md:gap-8 max-w-5xl mx-auto">
             
-            {/* Left Chevron */}
+            {/* Left Chevron Button */}
             <button
               onClick={handlePrev}
               aria-label="Previous dish"
-              className="absolute left-0 sm:left-4 z-30 w-12 h-12 rounded-full bg-white/5 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur active:scale-95"
+              className="w-12 h-12 sm:w-14 sm:h-14 bg-[#18120e] text-white border-2 border-[#18120e] rounded-none shadow-[4px_4px_0px_0px_#18120e] flex items-center justify-center hover:bg-[#f91814] transition-all cursor-pointer active:translate-x-0.5 active:translate-y-0.5 shrink-0 z-30"
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7" />
             </button>
 
-            {/* Active Focal Dish (Center Spotlight) */}
-            <div className="flex flex-col items-center justify-center z-20 transition-all duration-500 ease-out">
+            {/* Active Center Dish + Receding Right Trail Container */}
+            <div className="relative flex-1 flex items-center justify-center lg:justify-start lg:pl-12">
               
-              {/* Floating Speed Pill */}
-              <div className="mb-4 bg-black/60 border border-white/20 px-4 py-1.5 rounded-full font-mono text-xs font-bold text-white tracking-wider flex items-center gap-2 backdrop-blur shadow-xl">
-                <Clock className="w-3.5 h-3.5 text-[#f91814]" />
-                <span>Fastest Delivery • {activeDish.prepTime}</span>
-              </div>
-
-              {/* Dish Photo */}
-              <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-92 md:h-92 rounded-full overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.95)] border-4 border-white/10 transition-transform duration-500 hover:scale-105">
-                <Image
-                  src={activeDish.image}
-                  alt={activeDish.name}
-                  fill
-                  priority
-                  sizes="(max-width: 768px) 320px, 400px"
-                  className="object-cover object-center"
-                />
-              </div>
-
-              {/* Title & Price Below Dish */}
-              <div className="mt-6 text-center space-y-1.5">
-                <h3
-                  className="text-lg sm:text-xl font-bold text-zinc-300"
-                  style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
-                >
-                  {activeDish.name}
-                </h3>
-                <div
-                  className="text-2xl sm:text-3xl font-black text-white"
-                  style={{ fontFamily: 'var(--font-clubstone), "Inter Display", sans-serif' }}
-                >
-                  {activeDish.price}
+              {/* Active Focal Dish Stage (Scale 1.0) */}
+              <div className="relative z-20 flex flex-col items-center">
+                
+                {/* Floating Pill Tag (Top-Right) */}
+                <div className="absolute -top-3 sm:-top-4 right-0 sm:right-2 z-30 bg-[#FFFFFF] border-[1.5px] border-[#18120e] text-[#18120e] px-3 sm:px-4 py-1 rounded-full font-mono text-xs font-bold shadow-[2px_2px_0px_0px_#18120e] flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-[#f91814]" />
+                  <span>⏱ {activeDish.prepTime} DISPATCH</span>
                 </div>
+
+                {/* Pedestal / Circular High-Res Dish Base */}
+                <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-88 md:h-88 rounded-full border-4 border-[#18120e] shadow-[8px_8px_0px_0px_#18120e] overflow-hidden bg-white">
+                  <Image
+                    src={activeDish.image}
+                    alt={activeDish.name}
+                    fill
+                    priority
+                    sizes="(max-width: 640px) 260px, 360px"
+                    className="object-cover object-center transition-transform duration-300 hover:scale-105"
+                  />
+                </div>
+
+                {/* Floating Espresso Card Anchored to Dish Base */}
+                <div className="w-full max-w-sm bg-[#18120e] text-white rounded-none border-2 border-[#18120e] shadow-[4px_4px_0px_0px_#f91814] p-4 sm:p-5 flex items-center justify-between gap-4 -mt-6 sm:-mt-8 relative z-20">
+                  
+                  {/* Left: Dish Name & Price */}
+                  <div className="space-y-0.5 text-left truncate pr-2">
+                    <div className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest truncate">
+                      {activeDish.restaurant}
+                    </div>
+                    <h3
+                      className="text-base sm:text-lg font-bold text-white leading-tight truncate"
+                      style={{ fontFamily: 'var(--font-clubstone), "Inter Display", sans-serif' }}
+                    >
+                      {activeDish.name}
+                    </h3>
+                    <div className="text-lg sm:text-xl font-black text-[#f91814] tracking-tight">
+                      {activeDish.price}
+                    </div>
+                  </div>
+
+                  {/* Right: Square Vibrant Red "+" Button */}
+                  <button
+                    onClick={() => handleQuickAdd(activeDish.id)}
+                    aria-label="Add to order"
+                    className={`w-11 h-11 sm:w-12 sm:h-12 rounded-none border border-[#18120e] flex items-center justify-center transition-all cursor-pointer shrink-0 active:translate-x-0.5 active:translate-y-0.5 ${
+                      addedDishId === activeDish.id
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-[#f91814] text-white hover:bg-white hover:text-[#18120e]'
+                    }`}
+                  >
+                    {addedDishId === activeDish.id ? (
+                      <Check className="w-5 h-5 text-white" />
+                    ) : (
+                      <Plus className="w-6 h-6" />
+                    )}
+                  </button>
+
+                </div>
+
               </div>
 
-              {/* Floating Circular Plus / Check Button */}
-              <div className="mt-4">
-                <button
-                  onClick={() => handleAddToOrder(activeDish.id)}
-                  aria-label="Add to order"
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer shadow-[0_0_24px_rgba(249,24,20,0.5)] ${
-                    addedDishId === activeDish.id
-                      ? 'bg-emerald-600 scale-110'
-                      : 'bg-[#f91814] hover:scale-115 text-white'
-                  }`}
-                >
-                  {addedDishId === activeDish.id ? (
-                    <Check className="w-6 h-6 text-white" />
-                  ) : (
-                    <Plus className="w-6 h-6 text-white" />
+              {/* Receding Right Perspective Trail (Scale: 0.75, 0.5) */}
+              {filteredDishes.length > 1 && (
+                <div className="hidden md:flex items-center gap-6 absolute left-[62%] lg:left-[58%] top-1/2 -translate-y-1/2 z-10 pointer-events-auto">
+                  
+                  {/* Trail Item 1 (Scale 0.75, Opacity 80%) */}
+                  <div
+                    onClick={handleNext}
+                    className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-full border-3 border-[#18120e] shadow-[4px_4px_0px_0px_#18120e] overflow-hidden bg-white opacity-80 hover:opacity-100 hover:scale-95 transition-all duration-300 cursor-pointer shrink-0 scale-90"
+                  >
+                    <Image
+                      src={getUpcomingDish(1).image}
+                      alt={getUpcomingDish(1).name}
+                      fill
+                      sizes="200px"
+                      className="object-cover"
+                    />
+                  </div>
+
+                  {/* Trail Item 2 (Scale 0.5, Opacity 50%) */}
+                  {filteredDishes.length > 2 && (
+                    <div
+                      onClick={() => setActiveIndex((prev) => (prev + 2) % filteredDishes.length)}
+                      className="hidden lg:block relative w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-[#18120e] shadow-[3px_3px_0px_0px_#18120e] overflow-hidden bg-white opacity-50 hover:opacity-80 hover:scale-80 transition-all duration-300 cursor-pointer shrink-0 scale-75"
+                    >
+                      <Image
+                        src={getUpcomingDish(2).image}
+                        alt={getUpcomingDish(2).name}
+                        fill
+                        sizes="130px"
+                        className="object-cover"
+                      />
+                    </div>
                   )}
-                </button>
-              </div>
+
+                </div>
+              )}
 
             </div>
 
-            {/* Right Perspective Trail (Queued Dishes Getting Smaller) */}
-            <div className="hidden md:flex items-center gap-4 absolute right-4 lg:-right-4 top-1/2 -translate-y-1/2 z-10 pointer-events-auto">
-              
-              {/* Upcoming Dish 1 (Scale 75%) */}
-              <div
-                onClick={handleNext}
-                className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden shadow-2xl border-2 border-white/10 opacity-70 hover:opacity-100 hover:scale-85 transition-all duration-300 cursor-pointer shrink-0"
-              >
-                <Image
-                  src={getUpcomingDish(1).image}
-                  alt={getUpcomingDish(1).name}
-                  fill
-                  sizes="160px"
-                  className="object-cover"
-                />
-              </div>
-
-              {/* Upcoming Dish 2 (Scale 50%) */}
-              <div
-                onClick={() => setActiveIndex((prev) => (prev + 2) % DISHES.length)}
-                className="hidden lg:block relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden shadow-xl border border-white/10 opacity-40 hover:opacity-80 hover:scale-60 transition-all duration-300 cursor-pointer shrink-0"
-              >
-                <Image
-                  src={getUpcomingDish(2).image}
-                  alt={getUpcomingDish(2).name}
-                  fill
-                  sizes="100px"
-                  className="object-cover"
-                />
-              </div>
-
-              {/* Upcoming Dish 3 (Scale 30%) */}
-              <div
-                onClick={() => setActiveIndex((prev) => (prev + 3) % DISHES.length)}
-                className="hidden xl:block relative w-14 h-14 rounded-full overflow-hidden shadow-lg border border-white/5 opacity-20 hover:opacity-60 transition-all duration-300 cursor-pointer shrink-0"
-              >
-                <Image
-                  src={getUpcomingDish(3).image}
-                  alt={getUpcomingDish(3).name}
-                  fill
-                  sizes="60px"
-                  className="object-cover"
-                />
-              </div>
-
-            </div>
-
-            {/* Right Chevron */}
+            {/* Right Chevron Button */}
             <button
               onClick={handleNext}
               aria-label="Next dish"
-              className="absolute right-0 sm:right-2 z-30 w-12 h-12 rounded-full bg-white/5 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur active:scale-95"
+              className="w-12 h-12 sm:w-14 sm:h-14 bg-[#18120e] text-white border-2 border-[#18120e] rounded-none shadow-[4px_4px_0px_0px_#18120e] flex items-center justify-center hover:bg-[#f91814] transition-all cursor-pointer active:translate-x-0.5 active:translate-y-0.5 shrink-0 z-30"
             >
-              <ChevronRight className="w-6 h-6" />
+              <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7" />
             </button>
 
           </div>
 
-          {/* Bottom Right Minimal Tag */}
-          <div className="mt-8 text-right max-w-xs ml-auto pt-4 border-t border-zinc-900">
-            <p
-              className="text-sm sm:text-base text-zinc-300 font-semibold leading-snug"
-              style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
-            >
-              Enjoy our fast delivery service for your favorite meal.
-            </p>
-            <Link
-              href="/discovery"
-              className="text-xs font-mono uppercase tracking-widest text-zinc-500 hover:text-white mt-1.5 inline-block underline underline-offset-4"
-            >
-              Learn More ↗
-            </Link>
+        </div>
+
+        {/* 3. BOTTOM INFO BAR (Minimal Footer Strip) */}
+        <div className="border-t-2 border-[#18120e] pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          
+          {/* Left: Monospace Rating & Dispatches Stat */}
+          <div className="flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#18120e] uppercase tracking-wider">
+            <Star className="w-4 h-4 text-[#f91814] fill-[#f91814]" />
+            <span>4.9/5 RATING &bull; 1,000+ DISPATCHES THIS WEEK</span>
           </div>
+
+          {/* Right: Clean Inline Link */}
+          <Link
+            href="/discovery"
+            className="inline-flex items-center gap-2 text-sm sm:text-base font-bold text-[#18120e] hover:text-[#f91814] underline decoration-[#18120e] hover:decoration-[#f91814] decoration-2 underline-offset-4 transition-colors group"
+            style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
+          >
+            <span>View Complete Menu Catalog</span>
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          </Link>
 
         </div>
 
