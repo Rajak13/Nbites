@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --font-clubstone: var(--font-clubstone), "Inter Display", sans-serif;
+  --font-nokie: var(--font-nokie), sans-serif;
+
+  --color-canvas: #f5e3cd;
+  --color-brand-red: #f91814;
+  --color-brand-espresso: #18120e;
+  --color-brand-taupe: #7a6e65;
+  --color-brand-cream-card: #faedd6;
+  --color-brand-white: #ffffff;
+}
+
+:root {
+  --background: #f5e3cd;
+  --foreground: #18120e;
+}
+
+body {
+  background-color: #f5e3cd;
+  color: #18120e;
+  font-family: var(--font-nokie), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography Helpers */
+.font-clubstone {
+  font-family: var(--font-clubstone), "Inter Display", sans-serif;
+  letter-spacing: -1.5px;
+}
+
+.font-nokie {
+  font-family: var(--font-nokie), sans-serif;
+}
+
+/* Subtle Animated Checkerboard Ribbon (Max Height 44px - Clean Baseline Grid) */
+.checkerboard-ribbon {
+  height: 44px;
+  width: 100%;
+  background-image: conic-gradient(
+    #f91814 90deg,
+    #ffffff 90deg 180deg,
+    #f91814 180deg 270deg,
+    #ffffff 270deg
+  );
+  background-size: 44px 44px;
+  animation: slideChessboard 3s linear infinite;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+}
+
+@keyframes slideChessboard {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 44px 0;
+  }
+}
+
+/* Brutalist Custom Styling */
+.btn-brutalist-red {
+  background-color: #f91814;
+  color: #ffffff;
+  border-radius: 0px;
+  font-family: var(--font-nokie), sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-brutalist-red:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0px 0px #18120e;
+}
+
+.btn-brutalist-outline {
+  background-color: transparent;
+  color: #18120e;
+  border: 2px solid #18120e;
+  border-radius: 0px;
+  font-family: var(--font-nokie), sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-brutalist-outline:hover {
+  background-color: #18120e;
+  color: #ffffff;
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0px 0px rgba(249, 24, 20, 0.4);
+}

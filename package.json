@@ -1,0 +1,21 @@
+{
+  "name": "nbites-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=web",
+    "dev:api": "npm run dev --workspace=api-server",
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\"",
+    "build": "npm run build --workspace=@nbites/database && npm run build --workspace=web && npm run build --workspace=api-server",
+    "db:migrate": "npm run prisma:migrate --workspace=@nbites/database",
+    "db:generate": "npm run prisma:generate --workspace=@nbites/database"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.2"
+  }
+}
