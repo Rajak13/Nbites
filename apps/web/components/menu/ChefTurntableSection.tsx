@@ -12,6 +12,7 @@ import {
   Clock,
   ArrowRight,
 } from 'lucide-react';
+import { useCartStore } from '@/lib/cart-store';
 
 interface DishItem {
   id: number;
@@ -105,8 +106,22 @@ export function ChefTurntableSection() {
     setActiveIndex((prev) => (prev - 1 + filteredDishes.length) % filteredDishes.length);
   };
 
-  const handleQuickAdd = (id: number) => {
-    setAddedDishId(id);
+  const addItem = useCartStore((state) => state.addItem);
+
+  const handleQuickAdd = (dish: (typeof DISHES)[0]) => {
+    setAddedDishId(dish.id);
+    const numericPrice = parseInt(dish.price.replace(/\D/g, ''), 10) || 350;
+    addItem({
+      menuItemId: `dish-${dish.id}`,
+      name: dish.name,
+      basePrice: numericPrice,
+      price: numericPrice,
+      quantity: 1,
+      restaurantId: 'rest-ktm-1',
+      restaurantName: dish.restaurant.split('•')[0].trim(),
+      selectedModifiers: [],
+      image: dish.image,
+    });
     setTimeout(() => {
       setAddedDishId(null);
     }, 1500);
@@ -216,7 +231,7 @@ export function ChefTurntableSection() {
 
                   {/* Right: Square Vibrant Red "+" Button */}
                   <button
-                    onClick={() => handleQuickAdd(activeDish.id)}
+                    onClick={() => handleQuickAdd(activeDish)}
                     aria-label="Add to order"
                     className={`w-11 h-11 sm:w-12 sm:h-12 rounded-none border border-[#18120e] flex items-center justify-center transition-all cursor-pointer shrink-0 active:translate-x-0.5 active:translate-y-0.5 ${
                       addedDishId === activeDish.id

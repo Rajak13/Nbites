@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, ShoppingBag } from 'lucide-react';
+import { useCartStore } from '@/lib/cart-store';
 
 interface HeaderProps {
   theme?: 'red' | 'cream' | 'dark';
@@ -10,6 +11,8 @@ interface HeaderProps {
 
 export function Header({ theme = 'cream' }: HeaderProps) {
   const isLightText = theme === 'red' || theme === 'dark';
+  const setIsOpen = useCartStore((state) => state.setIsOpen);
+  const itemCount = useCartStore((state) => state.getItemCount());
 
   return (
     <header className="absolute top-0 left-0 right-0 w-full px-6 md:px-12 pt-8 pb-4 z-50 flex items-center justify-between pointer-events-auto transition-colors duration-500">
@@ -31,7 +34,7 @@ export function Header({ theme = 'cream' }: HeaderProps) {
         style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
       >
         <Link
-          href="#discovery"
+          href="/discovery"
           className={`uppercase transition-colors duration-300 ${
             isLightText
               ? 'text-white hover:text-zinc-200'
@@ -41,7 +44,7 @@ export function Header({ theme = 'cream' }: HeaderProps) {
           DISCOVERY
         </Link>
         <Link
-          href="#kds"
+          href="/kds"
           className={`uppercase transition-colors duration-300 ${
             isLightText
               ? 'text-white hover:text-zinc-200'
@@ -51,41 +54,62 @@ export function Header({ theme = 'cream' }: HeaderProps) {
           KITCHEN KDS
         </Link>
         <Link
-          href="#dispatch-api"
+          href="/order-tracking/ORD-KTM-8942"
           className={`uppercase transition-colors duration-300 ${
             isLightText
               ? 'text-white hover:text-zinc-200'
               : 'text-[#18120e] hover:text-[#f91814]'
           }`}
         >
-          DISPATCH API
+          LIVE TRACKING
         </Link>
         <Link
-          href="#about"
+          href="/checkout"
           className={`uppercase transition-colors duration-300 ${
             isLightText
               ? 'text-white hover:text-zinc-200'
               : 'text-[#18120e] hover:text-[#f91814]'
           }`}
         >
-          ABOUT
+          CHECKOUT
         </Link>
       </nav>
 
-      {/* Right: CTA Button */}
-      <Link href="#order">
+      {/* Right: Actions */}
+      <div className="flex items-center gap-3">
+        {/* Cart Drawer Trigger */}
         <button
-          className={`inline-flex items-center gap-2 px-[18px] py-[10px] text-sm font-bold uppercase tracking-wider transition-all duration-150 rounded-none cursor-pointer ${
+          onClick={() => setIsOpen(true)}
+          aria-label="Open cart ticket"
+          className={`relative inline-flex items-center justify-center w-11 h-11 border-2 transition-all duration-150 rounded-none cursor-pointer ${
             isLightText
-              ? 'bg-[#f91814] text-white border-2 border-[#f91814] hover:bg-white hover:text-[#18120e] hover:shadow-[4px_4px_0px_0px_#ffffff]'
-              : 'bg-[#f91814] text-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_#18120e]'
-          } active:translate-x-0 active:translate-y-0 active:shadow-none`}
-          style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
+              ? 'border-white text-white hover:bg-white hover:text-[#0B0B0B]'
+              : 'border-[#18120e] text-[#18120e] hover:bg-[#18120e] hover:text-white'
+          }`}
         >
-          <span>ORDER NOW</span>
-          <ArrowUpRight className="w-3.5 h-3.5" />
+          <ShoppingBag className="w-4 h-4" />
+          {itemCount > 0 && (
+            <span className="absolute -top-2 -right-2 w-5 h-5 bg-[#f91814] text-white border border-[#0B0B0B] font-mono text-[10px] font-black flex items-center justify-center">
+              {itemCount}
+            </span>
+          )}
         </button>
-      </Link>
+
+        {/* CTA Button */}
+        <Link href="/discovery">
+          <button
+            className={`inline-flex items-center gap-2 px-4 sm:px-[18px] py-[10px] text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-150 rounded-none cursor-pointer ${
+              isLightText
+                ? 'bg-[#f91814] text-white border-2 border-[#f91814] hover:bg-white hover:text-[#18120e] hover:shadow-[4px_4px_0px_0px_#ffffff]'
+                : 'bg-[#f91814] text-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_#18120e]'
+            } active:translate-x-0 active:translate-y-0 active:shadow-none`}
+            style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
+          >
+            <span>ORDER NOW</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </button>
+        </Link>
+      </div>
     </header>
   );
 }

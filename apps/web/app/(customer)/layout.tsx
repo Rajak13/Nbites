@@ -8,7 +8,7 @@ export default function CustomerLayout({
 }) {
   return (
     <div className="min-h-screen bg-[#0B0B0B] flex flex-col">
-      <Header />
+      <Header theme="dark" />
       <main className="flex-1">{children}</main>
       <footer className="border-t-2 border-[#27272A] bg-[#0B0B0B] py-12 px-6">
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row justify-between items-center gap-6">
@@ -17,7 +17,7 @@ export default function CustomerLayout({
               NBITES
             </span>
             <p className="text-xs text-[#71717A] font-mono mt-1">
-              Real-time culinary dispatch &bull; Kathmandu &bull; Lalitpur &bull; Bhaktapur
+              Real-time culinary dispatch &bull; Nepal
             </p>
           </div>
           <div className="flex items-center gap-6 font-mono text-xs text-[#A1A1AA] uppercase">

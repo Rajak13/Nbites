@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import { clubstoneFont, nokieFont } from '@/lib/fonts';
+import { SmoothScrollProvider } from '@/components/common/SmoothScrollProvider';
+import { CookieConsent } from '@/components/common/CookieConsent';
+import { CartDrawer } from '@/components/cart/CartDrawer';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -19,8 +22,13 @@ export default function RootLayout({
       className={`${clubstoneFont.variable} ${nokieFont.variable}`}
     >
       <body className="min-h-screen bg-[#f5e3cd] text-[#18120e] antialiased selection:bg-[#f91814] selection:text-white">
-        {children}
+        <SmoothScrollProvider>
+          {children}
+        </SmoothScrollProvider>
+        <CookieConsent />
+        <CartDrawer />
       </body>
     </html>
   );
 }
+

@@ -3,8 +3,9 @@
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, User } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { Header } from '@/components/hero/Header';
+import { NoodleSlide } from '@/components/hero/NoodleSlide';
 
 interface HeroSlide {
   id: number;
@@ -28,9 +29,9 @@ const HERO_SLIDES: HeroSlide[] = [
   },
   {
     id: 3,
-    image: '/hero/2.jpg', // Slide 3: BEST SELLER (Artisan Pizza on Dark)
-    theme: 'dark',
-    title: 'BEST SELLER',
+    image: '/hero/noodle-bg.svg', // Slide 3: FIRED BOWLS (Noodle bowl on cream pedestal over textured red)
+    theme: 'red',
+    title: 'FIRED BOWLS',
   },
 ];
 
@@ -247,92 +248,8 @@ export function HeroSection() {
             </div>
           )}
 
-          {/* SLIDE 3: BEST SELLER (Artisan Pizza on Dark Canvas - High-Contrast White Text) */}
-          {slide.id === 3 && (
-            <div className="w-full h-full flex flex-col justify-between pt-28 md:pt-36 lg:pt-40 pb-4 pointer-events-auto animate-fadeIn">
-              {/* Top Row: Headline on Left + White Editorial Columns on Right */}
-              <div className="flex flex-col lg:flex-row justify-between items-start gap-8">
-                
-                {/* Left Title */}
-                <div className="text-left">
-                  <span
-                    className="font-black text-6xl sm:text-7xl md:text-8xl lg:text-9xl text-[#f91814] tracking-[-3px] uppercase block leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)]"
-                    style={{ fontFamily: 'var(--font-clubstone), "Inter Display", sans-serif' }}
-                  >
-                    BEST SELLER
-                  </span>
-                </div>
-
-                {/* 2-Column Clean White Editorial Description with Red Hover Underlines */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl text-left pt-2 lg:pt-3">
-                  <p
-                    className="text-sm sm:text-[15px] md:text-base text-white font-bold leading-relaxed drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
-                    style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
-                  >
-                    <span className="hover:text-[#f91814] hover:underline hover:decoration-[#f91814] hover:decoration-2 hover:underline-offset-4 transition-all duration-200 cursor-pointer">
-                      Wood-fired artisan sourdough pizzas
-                    </span>{' '}
-                    baked to crisp perfection with bubbling mozzarella, spicy pepperoni, sliced olives, and fresh Himalayan herbs.
-                  </p>
-                  <p
-                    className="text-sm sm:text-[15px] md:text-base text-white font-bold leading-relaxed drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
-                    style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
-                  >
-                    <span className="hover:text-[#f91814] hover:underline hover:decoration-[#f91814] hover:decoration-2 hover:underline-offset-4 transition-all duration-200 cursor-pointer">
-                      Built for high-velocity kitchens:
-                    </span>{' '}
-                    synchronized order routing, automated driver dispatch, and{' '}
-                    <span className="hover:text-[#f91814] hover:underline hover:decoration-[#f91814] hover:decoration-2 hover:underline-offset-4 transition-all duration-200 cursor-pointer">
-                      instant Nepal wallet payouts
-                    </span>{' '}
-                    for partner restaurants.
-                  </p>
-                </div>
-              </div>
-
-              {/* Bottom Row: Left Action Buttons + Large Prominent Metric */}
-              <div className="w-full flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 pt-4">
-                
-                {/* Left Action Buttons */}
-                <div className="flex items-center gap-4">
-                  <Link href="/discovery">
-                    <button className="inline-flex items-center gap-2.5 bg-[#f91814] text-white px-7 py-3.5 text-sm sm:text-base font-bold uppercase tracking-wider rounded-none transition-all duration-150 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_#ffffff] active:translate-x-0 active:translate-y-0 active:shadow-none cursor-pointer shadow-2xl">
-                      <span>ORDER BEST SELLERS</span>
-                      <ArrowUpRight className="w-4 h-4" />
-                    </button>
-                  </Link>
-
-                  <Link href="#ratings">
-                    <button className="inline-flex items-center gap-2 bg-black/70 backdrop-blur border-2 border-white text-white px-6 py-3.5 text-sm sm:text-base font-bold uppercase tracking-wider rounded-none transition-all duration-150 hover:bg-white hover:text-black hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_#f91814] cursor-pointer shadow-2xl">
-                      <span>VIEW RATINGS</span>
-                    </button>
-                  </Link>
-                </div>
-
-                {/* Right: Large, Prominent Metric Module */}
-                <div className="flex items-center gap-5 sm:gap-7 text-white select-none pr-2 md:pr-8 pb-3">
-                  {/* Large Solid White User Avatar Icon */}
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-white/20 flex items-center justify-center border-4 border-white/50 shadow-2xl shrink-0">
-                    <User className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 text-white fill-white" />
-                  </div>
-
-                  {/* Huge Bold 3.2789K Number & Label */}
-                  <div className="flex flex-col">
-                    <span
-                      className="font-black text-6xl sm:text-7xl md:text-8xl lg:text-[96px] text-white tracking-[-4px] leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]"
-                      style={{ fontFamily: 'var(--font-clubstone), "Inter Display", sans-serif' }}
-                    >
-                      3.2789K
-                    </span>
-                    <span className="font-mono text-xs sm:text-sm md:text-[15px] text-white font-black uppercase tracking-widest mt-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                      HAPPY FOODIES SERVED
-                    </span>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
+          {/* SLIDE 3: FIRED BOWLS (Interactive Monumental Noodle Bowl on Pedestal) */}
+          {slide.id === 3 && <NoodleSlide />}
 
         </div>
 

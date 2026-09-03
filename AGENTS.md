@@ -41,6 +41,10 @@ nbites-monorepo/
   - **Status Chips / Badges**: `rounded-full` (100px pill radius) with uppercase mono font and pulsating telemetry indicators.
   - **Cards & Panes**: Sharp edges (`rounded-none`), heavy dark border framing (`border-zinc-800`), industrial typography.
 
+### 2.3 Strict Iconography & Editorial Constraints
+- **NEVER USE SPARKLE ICONS EVER**: Absolutely do NOT use `Sparkles` from `lucide-react`, sparkle emojis (`✨`, `✦`, `⭐`), or sparkle burst animations anywhere across the application. They look like cheap AI gimmicks and dilute high-end editorial authority.
+- **HERO FOOD IS A BRAND ASSET, NOT A STORE ITEM**: Hero slides (such as Slide 1 and Slide 3) present food purely as monumental editorial brand photography. Do NOT place price tags, "Order Dish" buy buttons, "Add to ticket" toggles, or floating status badges over hero assets. Keep them pure, bold, and clean.
+
 ---
 
 ## 3. Backend Guidelines (`apps/api-server`)
