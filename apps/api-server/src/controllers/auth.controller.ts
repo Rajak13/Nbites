@@ -54,8 +54,6 @@ export class AuthController {
         message: 'Security verification code transmitted successfully.',
         data: {
           phone,
-          // Expose devOtp only if devMode is explicitly enabled
-          ...(config.sms.devMode ? { devOtp: otp } : {}),
         },
       });
     } catch (error: any) {
@@ -179,6 +177,100 @@ export class AuthController {
       res.status(500).json({
         success: false,
         message: 'Internal server error during verification.',
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/auth/firebase-login
+   * Authenticates a user who has verified their phone number via Firebase Phone Auth
+   */
+  async firebaseLogin(req: Request, res: Response): Promise<void> {
+    try {
+      const { phone: rawPhone, name, city, termsAccepted } = req.body;
+
+      if (!rawPhone) {
+        res.status(400).json({
+          success: false,
+          message: 'Phone number is required.',
+        });
+        return;
+      }
+
+      const phone = sanitizeNepalPhone(String(rawPhone));
+      if (!isValidNepalPhone(phone)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid Nepal mobile number format.',
+        });
+        return;
+      }
+
+      // Upsert User in MongoDB
+      let user = await User.findOne({ phone });
+      const now = new Date();
+
+      if (!user) {
+        user = await User.create({
+          phone,
+          name: name?.trim() || 'nBites Explorer',
+          role: 'CUSTOMER',
+          themePreference: 'cream',
+          city: city?.trim() || 'Dharan',
+          termsAccepted: termsAccepted !== undefined ? Boolean(termsAccepted) : true,
+          termsAcceptedAt: now,
+          lastLoginAt: now,
+          savedAddresses: [],
+        });
+      } else {
+        user.lastLoginAt = now;
+        if (name && name.trim() && (!user.name || user.name === 'nBites Explorer')) {
+          user.name = name.trim();
+        }
+        if (city && city.trim()) {
+          user.city = city.trim();
+        }
+        if (termsAccepted) {
+          user.termsAccepted = true;
+          user.termsAcceptedAt = now;
+        }
+        await user.save();
+      }
+
+      // Sign nBites JWT token
+      const token = jwt.sign(
+        {
+          id: user._id.toString(),
+          phone: user.phone,
+          role: user.role,
+        },
+        config.jwt.secret,
+        { expiresIn: config.jwt.expiresIn } as jwt.SignOptions
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Firebase authentication successful.',
+        data: {
+          token,
+          user: {
+            id: user._id.toString(),
+            phone: user.phone,
+            name: user.name,
+            role: user.role,
+            city: user.city || 'Dharan',
+            termsAccepted: user.termsAccepted ?? true,
+            themePreference: user.themePreference || 'cream',
+            savedAddresses: user.savedAddresses || [],
+            createdAt: user.createdAt,
+          },
+        },
+      });
+    } catch (error: any) {
+      console.error('[AuthController.firebaseLogin] Error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error during Firebase authentication.',
       });
     }
   }

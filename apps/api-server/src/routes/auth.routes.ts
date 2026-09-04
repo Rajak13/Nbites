@@ -14,6 +14,10 @@ router.post('/verify-otp', (req, res) =>
   authController.verifyOtp(req, res)
 );
 
+router.post('/firebase-login', (req, res) =>
+  authController.firebaseLogin(req, res)
+);
+
 // Protected session endpoints
 router.get('/me', requireAuth, (req, res) =>
   authController.getMe(req, res)

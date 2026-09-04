@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { X, ShieldCheck, ArrowRight, Loader2, RefreshCw, MapPin } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth';
 import { getApiBaseUrl } from '@/lib/api-config';
+import { isFirebaseConfigured, getFirebaseAuth, createRecaptchaVerifier } from '@/lib/firebase';
 
 const CITIES = [
   { value: 'Dharan', label: 'Dharan (Eastern Hub)' },
@@ -29,12 +30,13 @@ export function OtpModal() {
   const [city, setCity] = React.useState(selectedCity || 'Dharan');
   const [acceptTerms, setAcceptTerms] = React.useState(true);
   const [digits, setDigits] = React.useState<string[]>(['', '', '', '', '', '']);
-  const [devOtp, setDevOtp] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [cooldown, setCooldown] = React.useState(0);
 
   const digitRefs = React.useRef<(HTMLInputElement | null)[]>([]);
+  const confirmationResultRef = React.useRef<any>(null);
+  const recaptchaVerifierRef = React.useRef<any>(null);
 
   // Keep city in sync with store
   React.useEffect(() => {
@@ -52,7 +54,7 @@ export function OtpModal() {
       setStep('phone');
       setDigits(['', '', '', '', '', '']);
       setError(null);
-      setDevOtp(null);
+      confirmationResultRef.current = null;
     }
   }, [isOpen, step]);
 
@@ -87,6 +89,58 @@ export function OtpModal() {
     setIsLoading(true);
     setError(null);
 
+    // 1. Primary path: Firebase Phone Auth (Delivers real SMS to any Nepal number)
+    if (isFirebaseConfigured()) {
+      try {
+        const { signInWithPhoneNumber } = await import('firebase/auth');
+        const auth = getFirebaseAuth();
+
+        if (auth) {
+          if (!recaptchaVerifierRef.current) {
+            recaptchaVerifierRef.current = createRecaptchaVerifier(
+              'recaptcha-container',
+              auth,
+              () => {
+                setError('SMS verification challenge expired. Please retry.');
+              }
+            );
+          }
+
+          const nepaliNumber = `+977${clean}`;
+          const confirmation = await signInWithPhoneNumber(
+            auth,
+            nepaliNumber,
+            recaptchaVerifierRef.current
+          );
+
+          confirmationResultRef.current = confirmation;
+          setStep('otp');
+          setCooldown(60);
+          setIsLoading(false);
+          return;
+        }
+      } catch (fbErr: any) {
+        console.warn('[Firebase Auth] Phone error:', fbErr);
+        if (fbErr?.code === 'auth/invalid-phone-number') {
+          setError('Invalid Nepal mobile number format.');
+          setIsLoading(false);
+          return;
+        }
+        if (fbErr?.code === 'auth/too-many-requests') {
+          setError('Too many requests sent. Please wait a minute before requesting another code.');
+          setIsLoading(false);
+          return;
+        }
+        if (fbErr?.code === 'auth/captcha-check-failed') {
+          setError('Security verification check failed. Please refresh and try again.');
+          setIsLoading(false);
+          return;
+        }
+        // If Firebase is disabled or fails, proceed to fallback local endpoint below
+      }
+    }
+
+    // 2. Fallback path: Internal API server endpoint
     try {
       const apiUrl = getApiBaseUrl();
       const res = await fetch(`${apiUrl}/auth/request-otp`, {
@@ -100,9 +154,6 @@ export function OtpModal() {
       if (res.ok && data.success) {
         setStep('otp');
         setCooldown(60);
-        if (data.data?.devOtp) {
-          setDevOtp(data.data.devOtp);
-        }
       } else {
         setError(data.message || 'Failed to send verification code. Please try again.');
       }
@@ -154,9 +205,55 @@ export function OtpModal() {
     setIsLoading(true);
     setError(null);
 
+    const apiUrl = getApiBaseUrl();
+    const cleanPhone = phone.replace(/\D/g, '');
+
+    // 1. If Firebase confirmationResult is active, verify code with Firebase
+    if (confirmationResultRef.current) {
+      try {
+        const userCredential = await confirmationResultRef.current.confirm(code);
+        const idToken = await userCredential.user.getIdToken();
+
+        // Sync authenticated user with nBites backend
+        const res = await fetch(`${apiUrl}/auth/firebase-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: cleanPhone,
+            idToken,
+            name: name.trim() || undefined,
+            city: city.trim() || 'Dharan',
+            termsAccepted: true,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success && data.data?.token) {
+          setSelectedCity(city.trim() || 'Dharan');
+          login(data.data.token, data.data.user);
+          closeModal();
+          return;
+        } else {
+          setError(data.message || 'Authentication synchronization failed.');
+        }
+      } catch (fbErr: any) {
+        console.error('[Firebase Verify Error]:', fbErr);
+        if (fbErr?.code === 'auth/invalid-verification-code') {
+          setError('Incorrect verification code. Please check and try again.');
+        } else if (fbErr?.code === 'auth/code-expired') {
+          setError('Verification code has expired. Please request a new one.');
+        } else {
+          setError(fbErr?.message || 'Verification failed. Please try again.');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // 2. Fallback: Internal backend OTP verification
     try {
-      const apiUrl = getApiBaseUrl();
-      const cleanPhone = phone.replace(/\D/g, '');
       const res = await fetch(`${apiUrl}/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -174,6 +271,7 @@ export function OtpModal() {
       if (res.ok && data.success && data.data?.token) {
         setSelectedCity(city.trim() || 'Dharan');
         login(data.data.token, data.data.user);
+        closeModal();
       } else {
         setError(data.message || 'Invalid or expired verification code.');
       }
@@ -184,14 +282,12 @@ export function OtpModal() {
     }
   };
 
-  const autofillDevOtp = () => {
-    if (!devOtp || devOtp.length !== 6) return;
-    setDigits(devOtp.split(''));
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs select-none">
       <div className="relative w-full max-w-md border-2 border-[#0B0B0B] dark:border-[#27272A] bg-[#F5F5F0] dark:bg-[#141414] p-6 sm:p-8 shadow-[6px_6px_0px_0px_#f91814]">
+        {/* Invisible reCAPTCHA container for Firebase Phone Auth */}
+        <div id="recaptcha-container" />
+
         {/* Close Button */}
         <button
           onClick={closeModal}
@@ -349,22 +445,6 @@ export function OtpModal() {
         {/* STEP 2: 6-Digit OTP Form */}
         {step === 'otp' && (
           <form onSubmit={handleVerifyOtp} className="space-y-5">
-            {/* Dev helper badge */}
-            {devOtp && (
-              <div className="p-2.5 border border-[#C8C6C1] dark:border-[#27272A] bg-[#E8E6E1] dark:bg-[#18181B] flex items-center justify-between font-mono text-[11px]">
-                <span className="text-[#6B6966] dark:text-[#A1A1AA]">
-                  TEST CODE: <strong className="text-[#f91814] tracking-widest">{devOtp}</strong>
-                </span>
-                <button
-                  type="button"
-                  onClick={autofillDevOtp}
-                  className="px-2 py-0.5 bg-[#f91814] text-white text-[10px] font-bold uppercase tracking-wider cursor-pointer"
-                >
-                  AUTOFILL
-                </button>
-              </div>
-            )}
-
             {/* 6 Digit Inputs */}
             <div className="flex justify-between gap-2" onPaste={handlePaste}>
               {digits.map((digit, idx) => (
