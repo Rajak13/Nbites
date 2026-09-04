@@ -27,6 +27,38 @@ interface KitchenItem {
 
 const FALLBACK_KITCHENS: KitchenItem[] = [
   {
+    id: 'rest-dh-1',
+    name: 'Dharan Bhanuchowk Sekuwa Corner',
+    slug: 'dharan-bhanuchowk-sekuwa',
+    tagline: 'Legendary charcoal-smoked pork sekuwa, sukuti fry & Eastern mountain herbs.',
+    coverImage: '/foods/2.jpg',
+    address: 'Bhanuchowk Commercial Sector, Ward 1',
+    zone: 'Bhanuchowk',
+    city: 'Dharan',
+    isOpen: true,
+    rating: 4.9,
+    reviewCount: 620,
+    estimatedPrepTimeMins: 16,
+    deliveryFee: 40,
+    specialties: ['CHARCOAL PORK SEKUWA', 'BUFF SUKUTI SADEKO', 'TIMUR ACHAR'],
+  },
+  {
+    id: 'rest-dh-2',
+    name: 'Dharan BPKIHS Artisan Food Guild',
+    slug: 'dharan-bpkihs-food-guild',
+    tagline: 'Handcrafted momo crafts, slow-braised thukpa & Eastern street delicacies.',
+    coverImage: '/foods/main.jpg',
+    address: 'Hospital Road, BPKIHS Gate 2',
+    zone: 'BPKIHS',
+    city: 'Dharan',
+    isOpen: true,
+    rating: 4.8,
+    reviewCount: 440,
+    estimatedPrepTimeMins: 15,
+    deliveryFee: 40,
+    specialties: ['BUFF JHOL MOMO', 'CHICKEN THUKPA', 'CHILI WONTONS'],
+  },
+  {
     id: 'rest-ktm-1',
     name: 'Kathmandu Himalayan Grill',
     slug: 'himalayan-grill-jhamsikhel',
@@ -92,16 +124,17 @@ const FALLBACK_KITCHENS: KitchenItem[] = [
   },
 ];
 
-const SECTORS = ['ALL SECTORS', 'KATHMANDU', 'LALITPUR', 'POKHARA', 'CHITWAN'];
+const CITIES = ['DHARAN', 'KATHMANDU', 'LALITPUR', 'POKHARA', 'CHITWAN', 'BIRATNAGAR'];
 
 export default function DiscoveryPage() {
   const router = useRouter();
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
   const openAuthModal = useAuthStore((state) => state.openAuthModal);
+  const selectedCity = useAuthStore((state) => state.selectedCity) || 'Dharan';
+  const setSelectedCity = useAuthStore((state) => state.setSelectedCity);
 
   const [kitchens, setKitchens] = React.useState<KitchenItem[]>(FALLBACK_KITCHENS);
-  const [selectedSector, setSelectedSector] = React.useState('ALL SECTORS');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
 
@@ -127,7 +160,7 @@ export default function DiscoveryPage() {
               id: k.id,
               name: k.name,
               slug: k.slug,
-              tagline: k.tagline || 'Artisan kitchen in Kathmandu Valley.',
+              tagline: k.tagline || 'Artisan kitchen.',
               coverImage: k.coverImage || '/foods/1.jpg',
               address: k.address,
               zone: k.zone,
@@ -138,13 +171,19 @@ export default function DiscoveryPage() {
               estimatedPrepTimeMins: k.estimatedPrepTimeMins || 20,
               deliveryFee: k.deliveryFeeBase || 50,
               specialties:
-                k.slug === 'himalayan-grill-jhamsikhel'
-                  ? ['BUFF JHOL MOMO', 'TIMUR PORK SEKUWA', 'CHILI THUKPA']
-                  : k.slug === 'old-town-newari-kitchen'
+                k.slug.includes('sekuwa')
+                  ? ['CHARCOAL PORK SEKUWA', 'BUFF SUKUTI SADEKO', 'TIMUR ACHAR']
+                  : k.slug.includes('newari')
                   ? ['SAMAY BAJI SET', 'BUFF CHOILA', 'STONE-GROUND ACHAR']
-                  : ['SOURDOUGH PIZZA', 'TIMUR CRUST', 'TRUFFLE FRIES'],
+                  : k.slug.includes('wood-fired')
+                  ? ['SOURDOUGH PIZZA', 'TIMUR CRUST', 'TRUFFLE FRIES']
+                  : ['BUFF JHOL MOMO', 'TIMUR SEKUWA', 'CHILI THUKPA'],
             }));
-            setKitchens(mapped);
+
+            // Merge with fallback kitchens to ensure Dharan and all cities have data
+            const existingSlugs = new Set(mapped.map((m) => m.slug));
+            const missingFallbacks = FALLBACK_KITCHENS.filter((f) => !existingSlugs.has(f.slug));
+            setKitchens([...mapped, ...missingFallbacks]);
           }
         }
       } catch {
@@ -157,16 +196,14 @@ export default function DiscoveryPage() {
   }, []);
 
   const filteredKitchens = kitchens.filter((k) => {
-    const matchesSector =
-      selectedSector === 'ALL SECTORS' ||
-      k.zone.toUpperCase().includes(selectedSector.toUpperCase()) ||
-      k.city.toUpperCase().includes(selectedSector.toUpperCase());
+    const matchesCity = k.city.toLowerCase() === selectedCity.toLowerCase();
     const matchesSearch =
+      searchQuery.trim() === '' ||
       k.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       k.tagline.toLowerCase().includes(searchQuery.toLowerCase()) ||
       k.zone.toLowerCase().includes(searchQuery.toLowerCase()) ||
       k.city.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSector && matchesSearch;
+    return matchesCity && matchesSearch;
   });
 
   return (
@@ -213,21 +250,32 @@ export default function DiscoveryPage() {
             </div>
           </div>
 
-          {/* Sector Tabs */}
-          <div className="flex items-center gap-2 pt-5 sm:pt-6 overflow-x-auto scrollbar-none pb-1">
-            {SECTORS.map((sec) => (
-              <button
-                key={sec}
-                onClick={() => setSelectedSector(sec)}
-                className={`px-3 sm:px-4 py-2 font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wider border-2 transition-all shrink-0 cursor-pointer rounded-none ${
-                  selectedSector === sec
-                    ? 'bg-[#f91814] text-white border-[#f91814] shadow-[3px_3px_0px_0px_#f91814]'
-                    : 'bg-transparent text-theme-muted border-theme-border hover:border-theme-text hover:text-theme-text'
-                }`}
-              >
-                {sec}
-              </button>
-            ))}
+          {/* City Selection Tabs */}
+          <div className="space-y-2 pt-4 sm:pt-6">
+            <div className="flex items-center justify-between text-xs font-mono text-theme-muted">
+              <span className="uppercase tracking-widest font-bold text-theme-text flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-[#f91814]" />
+                ACTIVE DELIVERY MARKET: <strong className="text-[#f91814]">{selectedCity.toUpperCase()}</strong>
+              </span>
+              <span className="text-[11px] hidden sm:inline">Hyper-Local Dispatch Only</span>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+              {CITIES.map((city) => (
+                <button
+                  key={city}
+                  type="button"
+                  onClick={() => setSelectedCity(city)}
+                  className={`px-3 sm:px-4 py-2 font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wider border-2 transition-all shrink-0 cursor-pointer rounded-none ${
+                    selectedCity.toUpperCase() === city
+                      ? 'bg-[#f91814] text-white border-[#f91814] shadow-[3px_3px_0px_0px_#f91814]'
+                      : 'bg-transparent text-theme-muted border-theme-border hover:border-theme-text hover:text-theme-text'
+                  }`}
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -322,19 +370,46 @@ export default function DiscoveryPage() {
 
         {/* Empty State */}
         {filteredKitchens.length === 0 && !isLoading && (
-          <div className="py-20 text-center space-y-4 border-2 border-dashed border-theme-border p-8 sm:p-10">
-            <p className="font-mono text-sm text-theme-muted">
-              No partner kitchens found matching &ldquo;{searchQuery}&rdquo;.
+          <div className="py-20 text-center space-y-4 border-2 border-dashed border-theme-border p-8 sm:p-10 bg-theme-surface/40">
+            <div className="w-12 h-12 border-2 border-[#f91814] flex items-center justify-center mx-auto text-[#f91814]">
+              <MapPin className="w-6 h-6" />
+            </div>
+            <h3 className="font-mono text-base text-theme-text font-bold uppercase tracking-wider">
+              {searchQuery ? 'NO MATCHING KITCHENS FOUND' : `NO ACTIVE KITCHENS IN ${selectedCity.toUpperCase()} YET`}
+            </h3>
+            <p className="font-mono text-xs sm:text-sm text-theme-muted max-w-md mx-auto leading-relaxed">
+              {searchQuery
+                ? `No kitchens in ${selectedCity} match "${searchQuery}". Try clearing your search.`
+                : `To prevent food spoilage and excessive courier travel costs, nBites only delivers within local operational zones. We are currently active in Dharan, Kathmandu, and Pokhara.`}
             </p>
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedSector('ALL SECTORS');
-              }}
-              className="px-4 py-2 border-2 border-theme-text text-theme-text font-mono text-xs uppercase tracking-widest hover:bg-[#f91814] hover:text-white hover:border-[#f91814] transition-colors"
-            >
-              RESET SEARCH FILTERS
-            </button>
+            <div className="flex flex-wrap justify-center gap-3 pt-2">
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="px-4 py-2 bg-[#f91814] text-white font-mono text-xs font-bold uppercase tracking-widest hover:bg-black transition-colors cursor-pointer"
+                >
+                  CLEAR SEARCH
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCity('Dharan')}
+                    className="px-4 py-2 bg-[#f91814] text-white font-mono text-xs font-bold uppercase tracking-widest hover:bg-black transition-colors cursor-pointer"
+                  >
+                    SWITCH TO DHARAN &rarr;
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCity('Kathmandu')}
+                    className="px-4 py-2 border-2 border-theme-text text-theme-text font-mono text-xs font-bold uppercase tracking-widest hover:bg-[#f91814] hover:text-white hover:border-[#f91814] transition-colors cursor-pointer"
+                  >
+                    SWITCH TO KATHMANDU
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>

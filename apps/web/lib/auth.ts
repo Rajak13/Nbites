@@ -16,6 +16,8 @@ export interface UserProfile {
   name: string;
   role: 'CUSTOMER' | 'MERCHANT' | 'DRIVER' | 'ADMIN';
   themePreference: 'cream' | 'dark';
+  city?: string;
+  termsAccepted?: boolean;
   savedAddresses?: SavedAddress[];
   createdAt?: string;
 }
@@ -23,12 +25,14 @@ export interface UserProfile {
 interface AuthState {
   token: string | null;
   user: UserProfile | null;
+  selectedCity: string;
   isAuthModalOpen: boolean;
   onAuthSuccessCallback: (() => void) | null;
 
   // Actions
   login: (token: string, user: UserProfile) => void;
   logout: () => void;
+  setSelectedCity: (city: string) => void;
   updateUser: (partial: Partial<UserProfile>) => void;
   openAuthModal: (onSuccess?: () => void) => void;
   closeAuthModal: () => void;
@@ -41,6 +45,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       token: null,
       user: null,
+      selectedCity: 'Dharan',
       isAuthModalOpen: false,
       onAuthSuccessCallback: null,
 
@@ -48,6 +53,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           token,
           user,
+          selectedCity: user.city || get().selectedCity || 'Dharan',
           isAuthModalOpen: false,
         });
 
@@ -56,6 +62,32 @@ export const useAuthStore = create<AuthState>()(
         if (cb) {
           cb();
           set({ onAuthSuccessCallback: null });
+        }
+      },
+
+      setSelectedCity: (city: string) => {
+        const trimmed = city.trim();
+        set({ selectedCity: trimmed });
+
+        const { user, token } = get();
+        if (user) {
+          set({ user: { ...user, city: trimmed } });
+        }
+
+        if (token) {
+          try {
+            const apiUrl = getApiBaseUrl();
+            fetch(`${apiUrl}/auth/me`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ city: trimmed }),
+            }).catch((err) => console.warn('[Auth] Failed to sync city to backend:', err));
+          } catch (err) {
+            console.warn('[Auth] Error dispatching city update:', err);
+          }
         }
       },
 
@@ -144,6 +176,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         token: state.token,
         user: state.user,
+        selectedCity: state.selectedCity,
       }),
     }
   )

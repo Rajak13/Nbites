@@ -72,12 +72,12 @@ export class AuthController {
    */
   async verifyOtp(req: Request, res: Response): Promise<void> {
     try {
-      const { phone: rawPhone, otp, name } = req.body;
+      const { phone: rawPhone, otp, name, city, termsAccepted } = req.body;
 
       if (!rawPhone || !otp) {
         res.status(400).json({
           success: false,
-          message: 'Both phone and OTP verification code are required.',
+          message: 'Both phone and verification code are required.',
         });
         return;
       }
@@ -124,6 +124,9 @@ export class AuthController {
           name: name?.trim() || 'nBites Explorer',
           role: 'CUSTOMER',
           themePreference: 'cream',
+          city: city?.trim() || 'Dharan',
+          termsAccepted: termsAccepted !== undefined ? Boolean(termsAccepted) : true,
+          termsAcceptedAt: now,
           lastLoginAt: now,
           savedAddresses: [],
         });
@@ -131,6 +134,13 @@ export class AuthController {
         user.lastLoginAt = now;
         if (name && name.trim() && (!user.name || user.name === 'nBites Explorer')) {
           user.name = name.trim();
+        }
+        if (city && city.trim()) {
+          user.city = city.trim();
+        }
+        if (termsAccepted) {
+          user.termsAccepted = true;
+          user.termsAcceptedAt = now;
         }
         await user.save();
       }
@@ -156,6 +166,8 @@ export class AuthController {
             phone: user.phone,
             name: user.name,
             role: user.role,
+            city: user.city || 'Dharan',
+            termsAccepted: user.termsAccepted ?? true,
             themePreference: user.themePreference || 'cream',
             savedAddresses: user.savedAddresses || [],
             createdAt: user.createdAt,
@@ -195,6 +207,8 @@ export class AuthController {
             phone: user.phone,
             name: user.name,
             role: user.role,
+            city: user.city || 'Dharan',
+            termsAccepted: user.termsAccepted ?? true,
             themePreference: user.themePreference || 'cream',
             savedAddresses: user.savedAddresses || [],
             createdAt: user.createdAt,
@@ -223,9 +237,10 @@ export class AuthController {
         return;
       }
 
-      const { name, themePreference, savedAddresses } = req.body;
+      const { name, themePreference, savedAddresses, city } = req.body;
 
       if (name !== undefined) user.name = String(name).trim();
+      if (city !== undefined && typeof city === 'string') user.city = city.trim();
       if (themePreference === 'cream' || themePreference === 'dark') {
         user.themePreference = themePreference;
       }
@@ -244,9 +259,11 @@ export class AuthController {
             phone: user.phone,
             name: user.name,
             role: user.role,
-            themePreference: user.themePreference,
-            savedAddresses: user.savedAddresses,
-            updatedAt: user.updatedAt,
+            city: user.city || 'Dharan',
+            termsAccepted: user.termsAccepted ?? true,
+            themePreference: user.themePreference || 'cream',
+            savedAddresses: user.savedAddresses || [],
+            createdAt: user.createdAt,
           },
         },
       });

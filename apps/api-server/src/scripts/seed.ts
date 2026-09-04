@@ -256,6 +256,164 @@ async function seed() {
           },
         ],
       },
+      {
+        name: 'Dharan Bhanuchowk Sekuwa Corner',
+        slug: 'dharan-bhanuchowk-sekuwa',
+        tagline: 'Legendary charcoal-smoked pork sekuwa, sukuti fry & Eastern mountain herbs.',
+        description:
+          'Iconic Dharan smokehouse crafting heritage timber-smoked sekuwa right by Bhanuchowk.',
+        coverImage: '/foods/2.jpg',
+        address: 'Bhanuchowk Commercial Sector, Ward 1',
+        zone: 'Bhanuchowk',
+        city: 'Dharan',
+        phone: '+977 25 520111',
+        isOpen: true,
+        isBusy: false,
+        rating: 4.9,
+        reviewCount: 620,
+        estimatedPrepTimeMins: 16,
+        deliveryFeeBase: 40,
+        location: {
+          type: 'Point',
+          coordinates: [87.2835, 26.8124], // [lng, lat] Dharan
+        },
+        categories: [
+          {
+            id: 'dharan-sekuwa',
+            name: 'CHARCOAL SEKUWA',
+            sortOrder: 1,
+            items: [
+              {
+                id: 'dh-sek-1',
+                name: 'Dharan Special Smoked Pork Sekuwa',
+                description:
+                  'Traditional charcoal-smoked pork marinated in mustard oil, mountain timur, garlic paste, and roasted cumin. Served with chiura and fiery dalle achar.',
+                basePrice: 480,
+                image: '/foods/2.jpg',
+                isVeg: false,
+                isSpicy: true,
+                prepTime: '15 mins',
+                isAvailable: true,
+                groups: [],
+              },
+              {
+                id: 'dh-suk-1',
+                name: 'Crispy Buff Sukuti Sadeko',
+                description:
+                  'Sun-dried and wood-smoked buffalo strips tossed with raw onions, roasted mustard seeds, chopped green chilies, and fresh lemon juice.',
+                basePrice: 380,
+                image: '/foods/main.jpg',
+                isVeg: false,
+                isSpicy: true,
+                prepTime: '12 mins',
+                isAvailable: true,
+                groups: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: 'Dharan BPKIHS Artisan Food Guild',
+        slug: 'dharan-bpkihs-food-guild',
+        tagline: 'Handcrafted momo crafts, slow-braised thukpa & Eastern street delicacies.',
+        description:
+          'Beloved campus-side culinary hub serving steamy bamboo momos and spiced noodles to Dharan food lovers.',
+        coverImage: '/foods/1.jpg',
+        address: 'Hospital Road, BPKIHS Gate 2',
+        zone: 'BPKIHS',
+        city: 'Dharan',
+        phone: '+977 25 524333',
+        isOpen: true,
+        isBusy: false,
+        rating: 4.8,
+        reviewCount: 440,
+        estimatedPrepTimeMins: 15,
+        deliveryFeeBase: 40,
+        location: {
+          type: 'Point',
+          coordinates: [87.2798, 26.808], // [lng, lat] BPKIHS Dharan
+        },
+        categories: [
+          {
+            id: 'momo-noodle',
+            name: 'MOMOS & BOWLS',
+            sortOrder: 1,
+            items: [
+              {
+                id: 'dh-momo-1',
+                name: 'Dharan Steamed Buff Jhol Momo',
+                description:
+                  'Thin-skinned water buffalo dumplings bathed in aromatic roasted sesame, tomato, and timur sauce.',
+                basePrice: 240,
+                image: '/foods/main.jpg',
+                isVeg: false,
+                isSpicy: true,
+                prepTime: '14 mins',
+                isAvailable: true,
+                groups: [],
+              },
+              {
+                id: 'dh-thukpa-1',
+                name: 'Eastern Spiced Chicken Thukpa',
+                description:
+                  'Handmade wheat noodles in hearty slow-simmered chicken bone broth with charred greens and chili paste.',
+                basePrice: 280,
+                image: '/foods/3.jpg',
+                isVeg: false,
+                isSpicy: true,
+                prepTime: '15 mins',
+                isAvailable: true,
+                groups: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: 'Phewa Lakeside Smokehouse',
+        slug: 'phewa-lakeside-smokehouse',
+        tagline: 'Fresh mountain trout grill, wild herbs & Himalayan firewood skewers.',
+        description:
+          'Authentic Lakeside smokehouse using seasoned Himalayan oak to grill freshwater fish and mountain kebabs.',
+        coverImage: '/hero/1.jpg',
+        address: 'Baidam, Center Point, Lakeside',
+        zone: 'Lakeside',
+        city: 'Pokhara',
+        phone: '+977 61 465000',
+        isOpen: true,
+        isBusy: false,
+        rating: 4.9,
+        reviewCount: 390,
+        estimatedPrepTimeMins: 20,
+        deliveryFeeBase: 50,
+        location: {
+          type: 'Point',
+          coordinates: [83.9595, 28.2096], // [lng, lat] Pokhara
+        },
+        categories: [
+          {
+            id: 'phewa-grill',
+            name: 'LAKESIDE GRILL',
+            sortOrder: 1,
+            items: [
+              {
+                id: 'pkr-trout-1',
+                name: 'Himalayan Oak Grilled Phewa Trout',
+                description:
+                  'Freshwater trout stuffed with local herbs, lemon wedges, and mountain timur, grilled over oak embers.',
+                basePrice: 850,
+                image: '/hero/1.jpg',
+                isVeg: false,
+                isSpicy: false,
+                prepTime: '20 mins',
+                isAvailable: true,
+                groups: [],
+              },
+            ],
+          },
+        ],
+      },
     ];
 
     const createdKitchens = await Restaurant.insertMany(kitchens);

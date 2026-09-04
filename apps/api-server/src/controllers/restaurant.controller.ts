@@ -188,9 +188,16 @@ export class RestaurantController {
    * GET /api/v1/restaurants
    * Returns all active restaurants.
    */
-  public async getAllRestaurants(_req: Request, res: Response): Promise<void> {
+  public async getAllRestaurants(req: Request, res: Response): Promise<void> {
     try {
-      const kitchens = await Restaurant.find({ isOpen: true }).lean();
+      const { city } = req.query;
+      const query: Record<string, unknown> = { isOpen: true };
+
+      if (city && typeof city === 'string' && city.toUpperCase() !== 'ALL' && city.toUpperCase() !== 'ALL SECTORS') {
+        query.city = { $regex: new RegExp(`^${city.trim()}$`, 'i') };
+      }
+
+      const kitchens = await Restaurant.find(query).lean();
 
       const data = kitchens.map((k) => ({
         id: k._id.toString(),

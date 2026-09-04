@@ -2,11 +2,21 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, ShoppingBag, User as UserIcon } from 'lucide-react';
+import { ArrowUpRight, ShoppingBag, User as UserIcon, MapPin, ChevronDown, Check } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 import { useAuthStore } from '@/lib/auth';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { useTheme } from '@/components/common/ThemeProvider';
+
+const CITIES = [
+  'Dharan',
+  'Kathmandu',
+  'Lalitpur',
+  'Pokhara',
+  'Chitwan',
+  'Biratnagar',
+  'Butwal',
+];
 
 interface HeaderProps {
   theme?: 'red' | 'cream' | 'dark';
@@ -26,6 +36,21 @@ export function Header({ theme, className = '', isHero = false }: HeaderProps) {
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
   const openAuthModal = useAuthStore((state) => state.openAuthModal);
+  const selectedCity = useAuthStore((state) => state.selectedCity) || 'Dharan';
+  const setSelectedCity = useAuthStore((state) => state.setSelectedCity);
+
+  const [isCityOpen, setIsCityOpen] = React.useState(false);
+  const cityDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (cityDropdownRef.current && !cityDropdownRef.current.contains(e.target as Node)) {
+        setIsCityOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const isAuthenticated = Boolean(token && user);
 
@@ -35,17 +60,63 @@ export function Header({ theme, className = '', isHero = false }: HeaderProps) {
 
   return (
     <header className={`${containerClass} ${className}`}>
-      {/* Left: Brand Logo */}
-      <Link href="/" className="group flex items-center gap-2 select-none shrink-0">
-        <span
-          className={`text-2xl sm:text-3xl font-bold tracking-[-1.5px] transition-colors duration-300 ${
-            isLightText ? 'text-[#F5F5F0]' : 'text-[#18120e]'
-          }`}
-          style={{ fontFamily: 'var(--font-clubstone), "Inter Display", sans-serif' }}
-        >
-          [nBites]
-        </span>
-      </Link>
+      {/* Left: Brand Logo & Active City */}
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+        <Link href="/" className="group flex items-center gap-2 select-none shrink-0">
+          <span
+            className={`text-2xl sm:text-3xl font-bold tracking-[-1.5px] transition-colors duration-300 ${
+              isLightText ? 'text-[#F5F5F0]' : 'text-[#18120e]'
+            }`}
+            style={{ fontFamily: 'var(--font-clubstone), "Inter Display", sans-serif' }}
+          >
+            [nBites]
+          </span>
+        </Link>
+
+        {/* DoorDash-style City Selector */}
+        <div className="relative" ref={cityDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsCityOpen((prev) => !prev)}
+            aria-label="Select delivery city"
+            className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:h-8 border font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition-all duration-150 rounded-none cursor-pointer ${
+              isLightText
+                ? 'border-white/40 text-[#F5F5F0] hover:border-white bg-white/10'
+                : 'border-theme-border text-theme-text hover:border-[#f91814] bg-theme-surface/60'
+            }`}
+          >
+            <MapPin className="w-3 h-3 text-[#f91814] shrink-0" />
+            <span className="truncate max-w-[65px] sm:max-w-[100px]">{selectedCity}</span>
+            <ChevronDown className={`w-3 h-3 transition-transform ${isCityOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isCityOpen && (
+            <div className="absolute top-full left-0 mt-1.5 w-48 border-2 border-theme-border bg-theme-bg shadow-[4px_4px_0px_0px_#f91814] z-50 py-1.5 font-mono text-xs animate-in fade-in zoom-in-95 duration-100">
+              <div className="px-3 py-1 text-[9px] uppercase tracking-widest text-theme-muted font-bold border-b border-theme-border mb-1">
+                DELIVERY CITY
+              </div>
+              {CITIES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCity(c);
+                    setIsCityOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                    selectedCity.toLowerCase() === c.toLowerCase()
+                      ? 'bg-[#f91814] text-white'
+                      : 'text-theme-text hover:bg-theme-surface'
+                  }`}
+                >
+                  <span>{c}</span>
+                  {selectedCity.toLowerCase() === c.toLowerCase() && <Check className="w-3 h-3" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Center: Desktop Navigation Links */}
       <nav

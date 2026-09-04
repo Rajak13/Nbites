@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
   ChevronLeft,
   Check,
+  AlertTriangle,
 } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 import { useAuthStore } from '@/lib/auth';
@@ -44,6 +45,60 @@ interface RestaurantDetails {
     items: MenuItemDetail[];
   }[];
 }
+
+const DHARAN_FALLBACK_RESTAURANT: RestaurantDetails = {
+  id: 'rest-dh-1',
+  name: 'Dharan Bhanuchowk Sekuwa Corner',
+  slug: 'dharan-bhanuchowk-sekuwa',
+  tagline: 'Legendary charcoal-smoked pork sekuwa, sukuti fry & Eastern mountain herbs.',
+  description:
+    'Iconic Dharan smokehouse crafting heritage timber-smoked sekuwa right by Bhanuchowk.',
+  coverImage: '/foods/2.jpg',
+  address: 'Bhanuchowk Commercial Sector, Ward 1',
+  zone: 'Bhanuchowk',
+  city: 'Dharan',
+  phone: '+977 25 520111',
+  isOpen: true,
+  rating: 4.9,
+  reviewCount: 620,
+  estimatedPrepTimeMins: 16,
+  deliveryFeeBase: 40,
+  coordinates: { lng: 87.2835, lat: 26.8124 },
+  categories: [
+    {
+      id: 'dharan-sekuwa',
+      name: 'CHARCOAL SEKUWA & SUKUTI',
+      items: [
+        {
+          id: 'dh-sek-1',
+          name: 'Dharan Special Smoked Pork Sekuwa',
+          description:
+            'Traditional charcoal-smoked pork marinated in mustard oil, mountain timur, garlic paste, and roasted cumin. Served with chiura and fiery dalle achar.',
+          basePrice: 480,
+          image: '/foods/2.jpg',
+          prepTime: '15 mins',
+          isVeg: false,
+          restaurantId: 'rest-dh-1',
+          restaurantName: 'Dharan Bhanuchowk Sekuwa Corner',
+          groups: [],
+        },
+        {
+          id: 'dh-suk-1',
+          name: 'Crispy Buff Sukuti Sadeko',
+          description:
+            'Sun-dried and wood-smoked buffalo strips tossed with raw onions, roasted mustard seeds, chopped green chilies, and fresh lemon juice.',
+          basePrice: 380,
+          image: '/foods/main.jpg',
+          prepTime: '12 mins',
+          isVeg: false,
+          restaurantId: 'rest-dh-1',
+          restaurantName: 'Dharan Bhanuchowk Sekuwa Corner',
+          groups: [],
+        },
+      ],
+    },
+  ],
+};
 
 const FALLBACK_RESTAURANT: RestaurantDetails = {
   id: 'rest-ktm-1',
@@ -201,8 +256,11 @@ export default function RestaurantDetailPage() {
   const params = useParams();
   const slug = (params?.slug as string) || 'himalayan-grill-jhamsikhel';
 
-  const [restaurant, setRestaurant] = React.useState<RestaurantDetails>(FALLBACK_RESTAURANT);
-  const [activeCategory, setActiveCategory] = React.useState<string>('momos');
+  const defaultRestaurant = slug.includes('dharan') ? DHARAN_FALLBACK_RESTAURANT : FALLBACK_RESTAURANT;
+  const [restaurant, setRestaurant] = React.useState<RestaurantDetails>(defaultRestaurant);
+  const [activeCategory, setActiveCategory] = React.useState<string>(
+    slug.includes('dharan') ? 'dharan-sekuwa' : 'momos'
+  );
   const [customizingItem, setCustomizingItem] = React.useState<MenuItemDetail | null>(null);
   const [addedItemIds, setAddedItemIds] = React.useState<Record<string, boolean>>({});
 
@@ -211,6 +269,14 @@ export default function RestaurantDetailPage() {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
   const openAuthModal = useAuthStore((state) => state.openAuthModal);
+  const selectedCity = useAuthStore((state) => state.selectedCity) || 'Dharan';
+  const setSelectedCity = useAuthStore((state) => state.setSelectedCity);
+
+  const isOutOfZone = Boolean(
+    restaurant.city &&
+    selectedCity &&
+    restaurant.city.toLowerCase() !== selectedCity.toLowerCase()
+  );
 
   const isAuthenticated = Boolean(token && user);
 
@@ -245,6 +311,13 @@ export default function RestaurantDetailPage() {
   }, [slug]);
 
   const handleQuickAdd = (item: MenuItemDetail) => {
+    if (isOutOfZone) {
+      alert(
+        `Order Blocked: ${restaurant.name} is located in ${restaurant.city}. Your active delivery market is set to ${selectedCity}. Cross-city ordering is disabled to prevent food waste.`
+      );
+      return;
+    }
+
     const hasRequired = item.groups.some((g) => g.required);
     if (hasRequired) {
       setCustomizingItem(item);
@@ -404,7 +477,41 @@ export default function RestaurantDetailPage() {
       </div>
 
       {/* ── Menu Grid ────────────────────────────────────────────────────────── */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-8 pt-8 sm:pt-10 space-y-12 sm:space-y-16">
+      <div className="max-w-5xl mx-auto px-4 sm:px-8 pt-8 sm:pt-10 space-y-10 sm:space-y-14">
+        {/* DoorDash-style Out of Delivery Zone Alert Banner */}
+        {isOutOfZone && (
+          <div className="border-2 border-[#f91814] bg-[#f91814]/15 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs shadow-[4px_4px_0px_0px_#f91814]">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-[#f91814] shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="font-bold text-[#f91814] uppercase tracking-wider text-sm">
+                  OUT OF DELIVERY ZONE ({restaurant.city?.toUpperCase()} ONLY)
+                </div>
+                <p className="text-theme-muted text-[11px] leading-relaxed max-w-2xl">
+                  {restaurant.name} operates in <strong>{restaurant.city}</strong>, while your active delivery market is set to <strong>{selectedCity}</strong>. Because cross-city delivery across highways is unfeasible and causes food spoilage, orders from this kitchen cannot be dispatched to {selectedCity}.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedCity(restaurant.city)}
+                className="px-3.5 py-2 bg-[#f91814] text-white font-bold text-[11px] uppercase tracking-wider hover:bg-black transition-colors cursor-pointer"
+              >
+                SWITCH CITY TO {restaurant.city?.toUpperCase()}
+              </button>
+              <Link href="/discovery">
+                <button
+                  type="button"
+                  className="px-3.5 py-2 border-2 border-theme-border text-theme-text font-bold text-[11px] uppercase tracking-wider hover:border-[#f91814] transition-colors cursor-pointer"
+                >
+                  VIEW {selectedCity.toUpperCase()} KITCHENS &rarr;
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {restaurant.categories.map((cat) => (
           <section key={cat.id} id={cat.id} className="space-y-5 sm:space-y-6">
             <div className="flex items-center justify-between pb-3 border-b-2 border-theme-border">
@@ -468,7 +575,15 @@ export default function RestaurantDetailPage() {
 
                   {/* Actions */}
                   <div className="flex items-center justify-end gap-2.5 pt-3 mt-3 border-t border-theme-border">
-                    {item.groups && item.groups.length > 0 ? (
+                    {isOutOfZone ? (
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAdd(item)}
+                        className="px-3 sm:px-4 py-2 border border-theme-border bg-theme-surface text-theme-muted font-mono text-[10px] font-bold uppercase tracking-wider opacity-60 cursor-not-allowed"
+                      >
+                        OUT OF ZONE
+                      </button>
+                    ) : item.groups && item.groups.length > 0 ? (
                       <button
                         onClick={() => setCustomizingItem(item)}
                         className="px-3 sm:px-4 py-2 bg-transparent text-theme-text border-2 border-theme-text font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wider hover:bg-[#f91814] hover:text-white hover:border-[#f91814] transition-all flex items-center gap-1.5 cursor-pointer"
@@ -510,6 +625,8 @@ export default function RestaurantDetailPage() {
       <ItemCustomizationModal
         item={customizingItem}
         onClose={() => setCustomizingItem(null)}
+        isOutOfZone={isOutOfZone}
+        selectedCity={selectedCity}
       />
     </div>
   );

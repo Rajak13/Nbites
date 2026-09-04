@@ -1,18 +1,33 @@
 'use client';
 
 import * as React from 'react';
-import { X, Phone, ShieldCheck, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { X, ShieldCheck, ArrowRight, Loader2, RefreshCw, MapPin } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth';
 import { getApiBaseUrl } from '@/lib/api-config';
+
+const CITIES = [
+  { value: 'Dharan', label: 'Dharan (Eastern Hub)' },
+  { value: 'Kathmandu', label: 'Kathmandu (Capital Hub)' },
+  { value: 'Lalitpur', label: 'Lalitpur (Patan Heritage)' },
+  { value: 'Pokhara', label: 'Pokhara (Lakeside)' },
+  { value: 'Chitwan', label: 'Chitwan (Bharatpur / Narayangarh)' },
+  { value: 'Biratnagar', label: 'Biratnagar (Morang Hub)' },
+  { value: 'Butwal', label: 'Butwal (Lumbini Hub)' },
+];
 
 export function OtpModal() {
   const isOpen = useAuthStore((state) => state.isAuthModalOpen);
   const closeModal = useAuthStore((state) => state.closeAuthModal);
   const login = useAuthStore((state) => state.login);
+  const selectedCity = useAuthStore((state) => state.selectedCity);
+  const setSelectedCity = useAuthStore((state) => state.setSelectedCity);
 
   const [step, setStep] = React.useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = React.useState('');
   const [name, setName] = React.useState('');
+  const [city, setCity] = React.useState(selectedCity || 'Dharan');
+  const [acceptTerms, setAcceptTerms] = React.useState(true);
   const [digits, setDigits] = React.useState<string[]>(['', '', '', '', '', '']);
   const [devOtp, setDevOtp] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -21,12 +36,16 @@ export function OtpModal() {
 
   const digitRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
+  // Keep city in sync with store
+  React.useEffect(() => {
+    if (selectedCity) setCity(selectedCity);
+  }, [selectedCity]);
+
   // Reset state on modal open/close
   React.useEffect(() => {
     if (isOpen) {
       setError(null);
       if (step === 'otp') {
-        // focus first digit
         setTimeout(() => digitRefs.current[0]?.focus(), 100);
       }
     } else {
@@ -60,6 +79,11 @@ export function OtpModal() {
       return;
     }
 
+    if (!acceptTerms) {
+      setError('You must accept the Terms & Conditions and Policies to proceed.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -80,7 +104,7 @@ export function OtpModal() {
           setDevOtp(data.data.devOtp);
         }
       } else {
-        setError(data.message || 'Failed to transmit verification code. Please try again.');
+        setError(data.message || 'Failed to send verification code. Please try again.');
       }
     } catch {
       setError('Network connection error. Check your connection.');
@@ -140,15 +164,18 @@ export function OtpModal() {
           phone: cleanPhone,
           otp: code,
           name: name.trim() || undefined,
+          city: city.trim() || 'Dharan',
+          termsAccepted: true,
         }),
       });
 
       const data = await res.json();
 
       if (res.ok && data.success && data.data?.token) {
+        setSelectedCity(city.trim() || 'Dharan');
         login(data.data.token, data.data.user);
       } else {
-        setError(data.message || 'Invalid or expired code.');
+        setError(data.message || 'Invalid or expired verification code.');
       }
     } catch {
       setError('Network connection error during verification.');
@@ -179,19 +206,19 @@ export function OtpModal() {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-[#f91814]" />
             <span className="font-mono text-[10px] text-[#f91814] uppercase tracking-[0.2em] font-bold">
-              SECURITY DISPATCH // IDENTITY
+              ACCOUNT ACCESS // NBITES
             </span>
           </div>
           <h2
             className="text-2xl sm:text-3xl text-[#0B0B0B] dark:text-[#F5F5F0] tracking-tight uppercase leading-tight"
             style={{ fontFamily: 'var(--font-clubstone), serif' }}
           >
-            {step === 'phone' ? 'ENTER PHONE NUMBER.' : 'VERIFY TELEMETRY CODE.'}
+            {step === 'phone' ? 'SIGN IN OR REGISTER.' : 'ENTER 6-DIGIT CODE.'}
           </h2>
           <p className="font-mono text-xs text-[#6B6966] dark:text-[#A1A1AA]">
             {step === 'phone'
-              ? 'Passwordless access. A 6-digit verification code will be sent.'
-              : `Transmitted code to +977 ${phone}. Valid for 5 minutes.`}
+              ? 'Enter your mobile number and operational city to unlock your local kitchens.'
+              : `Verification code sent to +977 ${phone}. Valid for 5 minutes.`}
           </p>
         </div>
 
@@ -202,7 +229,7 @@ export function OtpModal() {
           </div>
         )}
 
-        {/* STEP 1: Phone Input Form */}
+        {/* STEP 1: Phone Input & City Form */}
         {step === 'phone' && (
           <form onSubmit={handleRequestOtp} className="space-y-4">
             <div className="space-y-1.5 font-mono text-xs">
@@ -239,19 +266,79 @@ export function OtpModal() {
               />
             </div>
 
+            {/* City Selector */}
+            <div className="space-y-1.5 font-mono text-xs">
+              <label className="text-[#6B6966] dark:text-[#A1A1AA] uppercase tracking-wider block flex items-center justify-between">
+                <span>Your Active City <span className="text-[#f91814]">*</span></span>
+                <span className="text-[10px] text-[#f91814] lowercase font-normal">(filters kitchens near you)</span>
+              </label>
+              <div className="relative border-2 border-[#C8C6C1] dark:border-[#27272A] bg-[#EDECEA] dark:bg-[#0B0B0B] focus-within:border-[#f91814] transition-colors">
+                <select
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="w-full bg-transparent px-3 py-2.5 text-[#0B0B0B] dark:text-[#F5F5F0] focus:outline-none text-xs font-mono cursor-pointer uppercase font-bold"
+                >
+                  {CITIES.map((c) => (
+                    <option key={c.value} value={c.value} className="bg-[#F5F5F0] dark:bg-[#141414] text-[#0B0B0B] dark:text-[#F5F5F0]">
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Terms & Conditions Checkbox */}
+            <div className="pt-2 pb-1">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded-none accent-[#f91814] cursor-pointer"
+                />
+                <span className="font-mono text-[11px] text-[#6B6966] dark:text-[#A1A1AA] leading-relaxed select-none">
+                  I accept all{' '}
+                  <Link
+                    href="/terms"
+                    target="_blank"
+                    className="text-[#0B0B0B] dark:text-[#F5F5F0] underline font-bold hover:text-[#f91814]"
+                  >
+                    Terms &amp; Conditions
+                  </Link>
+                  ,{' '}
+                  <Link
+                    href="/privacy"
+                    target="_blank"
+                    className="text-[#0B0B0B] dark:text-[#F5F5F0] underline font-bold hover:text-[#f91814]"
+                  >
+                    Privacy Policy
+                  </Link>
+                  , and{' '}
+                  <Link
+                    href="/refunds"
+                    target="_blank"
+                    className="text-[#0B0B0B] dark:text-[#F5F5F0] underline font-bold hover:text-[#f91814]"
+                  >
+                    Refund Policies
+                  </Link>
+                  .
+                </span>
+              </label>
+            </div>
+
             <button
               type="submit"
-              disabled={isLoading || !phone}
+              disabled={isLoading || !phone || !acceptTerms}
               className="w-full mt-2 flex items-center justify-center gap-2 bg-[#f91814] text-[#F5F5F0] border-2 border-[#f91814] py-3.5 px-5 font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#0B0B0B] hover:border-[#0B0B0B] hover:shadow-[3px_3px_0px_0px_#f91814] transition-all cursor-pointer disabled:opacity-40"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>TRANSMITTING CODE...</span>
+                  <span>SENDING CODE...</span>
                 </>
               ) : (
                 <>
-                  <span>SEND SECURITY CODE</span>
+                  <span>SEND VERIFICATION CODE</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -309,7 +396,7 @@ export function OtpModal() {
                 </>
               ) : (
                 <>
-                  <span>CONFIRM IDENTITY</span>
+                  <span>VERIFY &amp; SIGN IN</span>
                   <ShieldCheck className="w-4 h-4" />
                 </>
               )}

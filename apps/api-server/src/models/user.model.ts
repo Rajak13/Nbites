@@ -8,6 +8,9 @@ export interface IUser extends Document {
   name?: string;
   role: UserRole;
   themePreference: ThemePreference;
+  city?: string;
+  termsAccepted?: boolean;
+  termsAcceptedAt?: Date;
   lastLoginAt?: Date;
   restaurantId?: string;
   driverId?: string;
@@ -35,6 +38,9 @@ const UserSchema = new Schema<IUser>(
       enum: ['cream', 'dark'],
       default: 'cream',
     },
+    city: { type: String, default: 'Dharan' },
+    termsAccepted: { type: Boolean, default: false },
+    termsAcceptedAt: { type: Date },
     lastLoginAt: { type: Date },
     restaurantId: { type: String },
     driverId: { type: String },

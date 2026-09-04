@@ -35,9 +35,11 @@ export interface MenuItemDetail {
 interface ItemCustomizationModalProps {
   item: MenuItemDetail | null;
   onClose: () => void;
+  isOutOfZone?: boolean;
+  selectedCity?: string;
 }
 
-export function ItemCustomizationModal({ item, onClose }: ItemCustomizationModalProps) {
+export function ItemCustomizationModal({ item, onClose, isOutOfZone, selectedCity }: ItemCustomizationModalProps) {
   const addItem = useCartStore((state) => state.addItem);
 
   const [selectedSingle, setSelectedSingle] = React.useState<Record<string, CustomizationOption>>({});
@@ -299,9 +301,12 @@ export function ItemCustomizationModal({ item, onClose }: ItemCustomizationModal
           {/* Add to Cart CTA Button */}
           <button
             onClick={handleAddToCart}
-            className="w-full sm:flex-1 bg-[#f91814] text-white border-2 border-[#f91814] py-3 px-6 font-mono text-xs sm:text-sm font-bold uppercase tracking-wider rounded-none hover:bg-white hover:text-[#0B0B0B] hover:shadow-[4px_4px_0px_0px_#ffffff] transition-all cursor-pointer text-center"
+            disabled={isOutOfZone}
+            className="w-full sm:flex-1 bg-[#f91814] text-white border-2 border-[#f91814] py-3 px-6 font-mono text-xs sm:text-sm font-bold uppercase tracking-wider rounded-none hover:bg-white hover:text-[#0B0B0B] hover:shadow-[4px_4px_0px_0px_#ffffff] transition-all cursor-pointer text-center disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            ADD TO TICKET &bull; Rs. {totalPrice}
+            {isOutOfZone
+              ? `OUT OF DELIVERY ZONE (${selectedCity?.toUpperCase() || 'LOCAL ONLY'})`
+              : `ADD TO TICKET • Rs. ${totalPrice}`}
           </button>
         </div>
 
