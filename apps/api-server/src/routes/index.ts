@@ -3,6 +3,7 @@ import orderRoutes from './order.routes';
 import paymentRoutes from './payment.routes';
 import dispatchRoutes from './dispatch.routes';
 import restaurantRoutes from './restaurant.routes';
+import authRoutes from './auth.routes';
 
 const router = Router();
 
@@ -17,9 +18,11 @@ router.get('/health', (_req, res) => {
 });
 
 // Mounted v1 API routes
+router.use('/auth', authRoutes);
 router.use('/restaurants', restaurantRoutes);
 router.use('/orders', orderRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/dispatch', dispatchRoutes);
 
 export default router;
+

@@ -14,18 +14,63 @@
   --color-brand-white: #ffffff;
 }
 
-:root {
+:root, [data-theme="cream"] {
   --background: #f5e3cd;
   --foreground: #18120e;
+  --theme-bg: #F5F5F0;
+  --theme-surface: #EDECEA;
+  --theme-surface-alt: #E8E6E1;
+  --theme-border: #C8C6C1;
+  --theme-border-subtle: #D8D6D1;
+  --theme-text: #0B0B0B;
+  --theme-text-muted: #6B6966;
+  --theme-text-dim: #9E9B97;
+  --theme-card-hover-border: #0B0B0B;
+  --theme-shadow-color: #0B0B0B;
+  --theme-header-bg: rgba(245, 245, 240, 0.95);
+  --theme-input-bg: #F5F5F0;
+}
+
+[data-theme="dark"] {
+  --background: #0B0B0B;
+  --foreground: #F5F5F0;
+  --theme-bg: #0B0B0B;
+  --theme-surface: #141414;
+  --theme-surface-alt: #18181B;
+  --theme-border: #27272A;
+  --theme-border-subtle: #3F3F46;
+  --theme-text: #F5F5F0;
+  --theme-text-muted: #A1A1AA;
+  --theme-text-dim: #71717A;
+  --theme-card-hover-border: #f91814;
+  --theme-shadow-color: #ffffff;
+  --theme-header-bg: rgba(11, 11, 11, 0.95);
+  --theme-input-bg: #0B0B0B;
 }
 
 body {
-  background-color: #f5e3cd;
-  color: #18120e;
+  background-color: var(--background);
+  color: var(--foreground);
   font-family: var(--font-nokie), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
+
+/* Theme utility bindings */
+.bg-theme-bg { background-color: var(--theme-bg); }
+.bg-theme-surface { background-color: var(--theme-surface); }
+.bg-theme-surface-alt { background-color: var(--theme-surface-alt); }
+.bg-theme-header { background-color: var(--theme-header-bg); }
+.bg-theme-input { background-color: var(--theme-input-bg); }
+
+.text-theme-text { color: var(--theme-text); }
+.text-theme-muted { color: var(--theme-text-muted); }
+.text-theme-dim { color: var(--theme-text-dim); }
+
+.border-theme-border { border-color: var(--theme-border); }
+.border-theme-subtle { border-color: var(--theme-border-subtle); }
+
 
 /* Typography Helpers */
 .font-clubstone {

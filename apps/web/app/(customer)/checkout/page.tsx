@@ -14,6 +14,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
+import { useAuthStore } from '@/lib/auth';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -26,13 +27,32 @@ export default function CheckoutPage() {
     clearCart,
   } = useCartStore();
 
-  const [phone, setPhone] = React.useState('9841234567');
-  const [name, setName] = React.useState('Aayush Shrestha');
-  const [landmark, setLandmark] = React.useState('Lazimpat Heights, Ward 2, Near British Embassy');
+  const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+  const openAuthModal = useAuthStore((state) => state.openAuthModal);
+
+  const [phone, setPhone] = React.useState('');
+  const [name, setName] = React.useState('');
+  const [landmark, setLandmark] = React.useState('');
   const [dropoffOption, setDropoffOption] = React.useState('call');
   const [paymentMethod, setPaymentMethod] = React.useState<'ESEWA' | 'KHALTI' | 'COD'>('ESEWA');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [phoneError, setPhoneError] = React.useState('');
+
+  // Pre-fill user information if authenticated
+  React.useEffect(() => {
+    if (user) {
+      if (user.phone && !phone) setPhone(user.phone);
+      if (user.name && !name) setName(user.name);
+      if (user.savedAddresses && user.savedAddresses.length > 0 && !landmark) {
+        setLandmark(user.savedAddresses[0].landmark);
+      }
+    } else {
+      if (!phone) setPhone('9841234567');
+      if (!name) setName('Aayush Shrestha');
+      if (!landmark) setLandmark('Lazimpat Heights, Ward 2, Near British Embassy');
+    }
+  }, [user]);
 
   const subtotal = getSubtotal();
   const deliveryFee = getDeliveryFee();
@@ -44,8 +64,11 @@ export default function CheckoutPage() {
     return /^(?:977)?9[78]\d{8}$/.test(clean);
   };
 
-  const handlePlaceOrder = async () => {
-    if (!validateNepalPhone(phone)) {
+  const executeOrderSubmission = async (overridePhone?: string, overrideName?: string) => {
+    const activePhone = overridePhone || phone;
+    const activeName = overrideName || name;
+
+    if (!validateNepalPhone(activePhone)) {
       setPhoneError('Please enter a valid 10-digit Nepal mobile number (98XXXXXXXX or 97XXXXXXXX).');
       return;
     }
@@ -64,10 +87,10 @@ export default function CheckoutPage() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
       const payload = {
-        customerPhone: phone,
-        customerName: name,
+        customerPhone: activePhone.replace(/\D/g, ''),
+        customerName: activeName,
         restaurantId: activeRestaurant?.id || 'rest-ktm-1',
-        deliveryLandmark: landmark,
+        deliveryLandmark: landmark || 'Kathmandu Valley Gate',
         dropoffInstruction: dropoffOption,
         deliveryLat: 27.7172,
         deliveryLng: 85.324,
@@ -87,7 +110,10 @@ export default function CheckoutPage() {
 
       const res = await fetch(`${apiUrl}/orders`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 
@@ -102,8 +128,8 @@ export default function CheckoutPage() {
             restaurant: activeRestaurant?.name || 'Kathmandu Himalayan Grill',
             items: items.length > 0 ? items : payload.items,
             total: json.data?.order?.totalPayable || total,
-            customerName: name,
-            phone,
+            customerName: activeName,
+            phone: activePhone,
             deliveryAddress: landmark,
             paymentMethod,
             deliveryPin: json.data?.order?.deliveryPin || '8492',
@@ -127,8 +153,8 @@ export default function CheckoutPage() {
         restaurant: activeRestaurant?.name || 'Kathmandu Himalayan Grill',
         items: items.length > 0 ? items : [{ name: 'Smoked Timur Buff Jhol Momo', quantity: 1, price: 280 }],
         total: total > 0 ? total : 330,
-        customerName: name,
-        phone,
+        customerName: activeName,
+        phone: activePhone,
         deliveryAddress: landmark,
         paymentMethod,
         deliveryPin: '8492',
@@ -143,12 +169,24 @@ export default function CheckoutPage() {
     }, 1000);
   };
 
+  const handlePlaceOrder = () => {
+    // If not authenticated, open the OTP verification modal first
+    if (!token || !user) {
+      openAuthModal(() => {
+        executeOrderSubmission();
+      });
+      return;
+    }
+
+    executeOrderSubmission();
+  };
+
   return (
-    <div className="min-h-screen bg-[#F5F5F0] text-[#0B0B0B] select-none">
+    <div className="min-h-screen bg-theme-bg text-theme-text select-none transition-colors duration-200">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-12 pt-24 sm:pt-28 md:pt-32 pb-24 space-y-8 sm:space-y-10">
 
         {/* ── Header ───────────────────────────────────────────────────────── */}
-        <div className="border-b-2 border-[#C8C6C1] pb-6 space-y-2">
+        <div className="border-b-2 border-theme-border pb-6 space-y-2">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-[#f91814]" />
             <span className="font-mono text-[10px] sm:text-xs text-[#f91814] uppercase tracking-[0.2em] font-bold">
@@ -156,16 +194,16 @@ export default function CheckoutPage() {
             </span>
           </div>
           <h1
-            className="text-3xl sm:text-5xl md:text-6xl tracking-tight text-[#0B0B0B] uppercase leading-none"
+            className="text-3xl sm:text-5xl md:text-6xl tracking-tight uppercase leading-none"
             style={{ fontFamily: 'var(--font-clubstone), serif' }}
           >
             ORDER CHECKOUT.
           </h1>
           <p
-            className="font-mono text-xs text-[#6B6966]"
+            className="font-mono text-xs text-theme-muted"
             style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
           >
-            Direct phone-first dispatch. No password or registration required.
+            Direct phone-first dispatch. Verified via real-time mobile OTP telemetry.
           </p>
         </div>
 
@@ -175,24 +213,31 @@ export default function CheckoutPage() {
           <div className="lg:col-span-7 space-y-6 sm:space-y-8">
 
             {/* 1. Identity Form */}
-            <div className="border-2 border-[#C8C6C1] bg-[#EDECEA] p-5 sm:p-6 space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#C8C6C1] pb-3 gap-2">
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#0B0B0B] flex items-center gap-2">
+            <div className="border-2 border-theme-border bg-theme-surface p-5 sm:p-6 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-theme-border pb-3 gap-2">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                   <Phone className="w-4 h-4 text-[#f91814]" />
                   Contact &amp; Delivery Identity
                 </span>
-                <span className="font-mono text-[10px] text-emerald-700 uppercase font-bold">
-                  SMS DISPATCH GATEWAY
-                </span>
+                {user ? (
+                  <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-bold flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" />
+                    ACCOUNT VERIFIED ({user.phone})
+                  </span>
+                ) : (
+                  <span className="font-mono text-[10px] text-theme-muted uppercase font-bold">
+                    OTP GATEWAY ON SUBMISSION
+                  </span>
+                )}
               </div>
 
               {/* Phone */}
               <div className="space-y-1.5 font-mono text-xs">
-                <label className="text-[#6B6966] uppercase tracking-wider block">
+                <label className="text-theme-muted uppercase tracking-wider block">
                   Nepal Mobile Number <span className="text-[#f91814]">*</span>
                 </label>
-                <div className="flex border-2 border-[#C8C6C1] bg-[#F5F5F0] focus-within:border-[#f91814] transition-colors">
-                  <span className="px-3 sm:px-3.5 py-2.5 bg-[#E8E6E1] text-[#6B6966] border-r border-[#C8C6C1] flex items-center font-bold text-xs">
+                <div className="flex border-2 border-theme-border bg-theme-bg focus-within:border-[#f91814] transition-colors">
+                  <span className="px-3 sm:px-3.5 py-2.5 bg-theme-surface-alt text-theme-muted border-r border-theme-border flex items-center font-bold text-xs">
                     +977
                   </span>
                   <input
@@ -204,13 +249,13 @@ export default function CheckoutPage() {
                     }}
                     placeholder="98XXXXXXXX"
                     maxLength={10}
-                    className="flex-1 bg-transparent px-3 py-2.5 text-[#0B0B0B] focus:outline-none text-sm tracking-wider font-mono"
+                    className="flex-1 bg-transparent px-3 py-2.5 text-theme-text focus:outline-none text-sm tracking-wider font-mono"
                   />
                 </div>
                 {phoneError ? (
                   <p className="text-[11px] text-[#f91814] pt-1">{phoneError}</p>
                 ) : (
-                  <p className="text-[10px] text-[#6B6966]">
+                  <p className="text-[10px] text-theme-muted">
                     Rider calls this number upon arriving at your gate.
                   </p>
                 )}
@@ -218,39 +263,64 @@ export default function CheckoutPage() {
 
               {/* Name */}
               <div className="space-y-1.5 font-mono text-xs">
-                <label className="text-[#6B6966] uppercase tracking-wider block">Full Name</label>
-                <div className="flex items-center border-2 border-[#C8C6C1] bg-[#F5F5F0] px-3 py-2.5 focus-within:border-[#f91814] transition-colors">
-                  <User className="w-4 h-4 text-[#6B6966] mr-2 shrink-0" />
+                <label className="text-theme-muted uppercase tracking-wider block">Full Name</label>
+                <div className="flex items-center border-2 border-theme-border bg-theme-bg px-3 py-2.5 focus-within:border-[#f91814] transition-colors">
+                  <User className="w-4 h-4 text-theme-muted mr-2 shrink-0" />
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Aayush Shrestha"
-                    className="flex-1 bg-transparent text-[#0B0B0B] focus:outline-none text-xs font-mono"
+                    className="flex-1 bg-transparent text-theme-text focus:outline-none text-xs font-mono"
                   />
                 </div>
               </div>
 
+              {/* Saved Addresses quick-picker */}
+              {user?.savedAddresses && user.savedAddresses.length > 0 && (
+                <div className="space-y-1.5 font-mono text-xs">
+                  <span className="text-theme-muted uppercase tracking-wider block text-[10px]">
+                    Saved Delivery Spots
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {user.savedAddresses.map((addr, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setLandmark(addr.landmark)}
+                        className={`px-2.5 py-1 text-[10px] font-mono uppercase font-bold border transition-colors cursor-pointer ${
+                          landmark === addr.landmark
+                            ? 'bg-[#f91814] text-white border-[#f91814]'
+                            : 'border-theme-border bg-theme-bg text-theme-muted hover:text-theme-text'
+                        }`}
+                      >
+                        {addr.label}: {addr.landmark.slice(0, 18)}...
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Landmark */}
               <div className="space-y-1.5 font-mono text-xs">
-                <label className="text-[#6B6966] uppercase tracking-wider block">
+                <label className="text-theme-muted uppercase tracking-wider block">
                   Delivery Landmark / Address <span className="text-[#f91814]">*</span>
                 </label>
-                <div className="flex items-start border-2 border-[#C8C6C1] bg-[#F5F5F0] p-3 focus-within:border-[#f91814] transition-colors">
+                <div className="flex items-start border-2 border-theme-border bg-theme-bg p-3 focus-within:border-[#f91814] transition-colors">
                   <MapPin className="w-4 h-4 text-[#f91814] mr-2 shrink-0 mt-0.5" />
                   <textarea
                     rows={2}
                     value={landmark}
                     onChange={(e) => setLandmark(e.target.value)}
                     placeholder="e.g. Lazimpat Heights, Ward 2, Near British Embassy, Blue gate..."
-                    className="flex-1 bg-transparent text-[#0B0B0B] focus:outline-none text-xs font-mono resize-none"
+                    className="flex-1 bg-transparent text-theme-text focus:outline-none text-xs font-mono resize-none"
                   />
                 </div>
               </div>
 
               {/* Drop-off */}
               <div className="space-y-1.5 font-mono text-xs pt-1">
-                <label className="text-[#6B6966] uppercase tracking-wider block">
+                <label className="text-theme-muted uppercase tracking-wider block">
                   Drop-off Instruction
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -265,8 +335,8 @@ export default function CheckoutPage() {
                       onClick={() => setDropoffOption(opt.id)}
                       className={`p-2.5 border-2 text-[10px] sm:text-[11px] font-mono transition-colors text-center cursor-pointer rounded-none ${
                         dropoffOption === opt.id
-                          ? 'border-[#f91814] bg-[#f91814]/10 text-[#0B0B0B] font-bold'
-                          : 'border-[#C8C6C1] bg-[#F5F5F0] text-[#6B6966] hover:border-[#0B0B0B]'
+                          ? 'border-[#f91814] bg-[#f91814]/10 text-theme-text font-bold'
+                          : 'border-theme-border bg-theme-bg text-theme-muted hover:border-theme-text'
                       }`}
                     >
                       {opt.label}
@@ -277,8 +347,8 @@ export default function CheckoutPage() {
             </div>
 
             {/* 2. Payment Selector */}
-            <div className="border-2 border-[#C8C6C1] bg-[#EDECEA] p-5 sm:p-6 space-y-4">
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#0B0B0B] flex items-center gap-2 border-b border-[#C8C6C1] pb-3">
+            <div className="border-2 border-theme-border bg-theme-surface p-5 sm:p-6 space-y-4">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b border-theme-border pb-3">
                 <CreditCard className="w-4 h-4 text-[#f91814]" />
                 Select Nepal Payment Gateway
               </span>
@@ -290,7 +360,7 @@ export default function CheckoutPage() {
                   className={`cursor-pointer border-2 p-4 flex items-center justify-between transition-colors ${
                     paymentMethod === 'ESEWA'
                       ? 'border-[#60BB46] bg-[#60BB46]/10'
-                      : 'border-[#C8C6C1] bg-[#F5F5F0] hover:border-[#0B0B0B]'
+                      : 'border-theme-border bg-theme-bg hover:border-zinc-500'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -298,8 +368,8 @@ export default function CheckoutPage() {
                       eSewa
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-[#0B0B0B]">eSewa v2 Instant Pay</div>
-                      <div className="text-[11px] text-[#6B6966]">
+                      <div className="font-bold text-sm text-theme-text">eSewa v2 Instant Pay</div>
+                      <div className="text-[11px] text-theme-muted">
                         Official HMAC-SHA256 signature checkout
                       </div>
                     </div>
@@ -315,7 +385,7 @@ export default function CheckoutPage() {
                   className={`cursor-pointer border-2 p-4 flex items-center justify-between transition-colors ${
                     paymentMethod === 'KHALTI'
                       ? 'border-[#5D2E8E] bg-[#5D2E8E]/10'
-                      : 'border-[#C8C6C1] bg-[#F5F5F0] hover:border-[#0B0B0B]'
+                      : 'border-theme-border bg-theme-bg hover:border-zinc-500'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -323,8 +393,8 @@ export default function CheckoutPage() {
                       Khalti
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-[#0B0B0B]">Khalti ePayment</div>
-                      <div className="text-[11px] text-[#6B6966]">
+                      <div className="font-bold text-sm text-theme-text">Khalti ePayment</div>
+                      <div className="text-[11px] text-theme-muted">
                         Pay via Khalti Wallet or Mobile Banking
                       </div>
                     </div>
@@ -337,16 +407,16 @@ export default function CheckoutPage() {
                   className={`cursor-pointer border-2 p-4 flex items-center justify-between transition-colors ${
                     paymentMethod === 'COD'
                       ? 'border-[#f91814] bg-[#f91814]/10'
-                      : 'border-[#C8C6C1] bg-[#F5F5F0] hover:border-[#0B0B0B]'
+                      : 'border-theme-border bg-theme-bg hover:border-zinc-500'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 bg-[#C8C6C1] text-[#0B0B0B] flex items-center justify-center font-bold text-[10px] shrink-0">
+                    <div className="h-9 w-9 bg-zinc-700 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
                       COD
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-[#0B0B0B]">Cash / QR on Delivery</div>
-                      <div className="text-[11px] text-[#6B6966]">
+                      <div className="font-bold text-sm text-theme-text">Cash / QR on Delivery</div>
+                      <div className="text-[11px] text-theme-muted">
                         Pay rider in cash or Fonepay QR upon arrival (Max Rs. 5,000)
                       </div>
                     </div>
@@ -358,9 +428,9 @@ export default function CheckoutPage() {
 
           {/* ── Right: Ticket Ledger ──────────────────────────────────────── */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="border-2 border-[#C8C6C1] bg-[#EDECEA] p-5 sm:p-6 space-y-5">
-              <div className="flex items-center justify-between border-b border-[#C8C6C1] pb-3">
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#0B0B0B]">
+            <div className="border-2 border-theme-border bg-theme-surface p-5 sm:p-6 space-y-5">
+              <div className="flex items-center justify-between border-b border-theme-border pb-3">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider">
                   Order Ticket
                 </span>
                 {activeRestaurant && (
@@ -371,11 +441,11 @@ export default function CheckoutPage() {
               </div>
 
               {/* Items */}
-              <div className="space-y-3 font-mono text-xs border-b border-[#C8C6C1] pb-4">
+              <div className="space-y-3 font-mono text-xs border-b border-theme-border pb-4">
                 {items.length === 0 ? (
                   <div className="text-center py-6 space-y-2">
-                    <ShoppingBag className="w-6 h-6 text-[#6B6966] mx-auto" />
-                    <p className="text-[#6B6966]">Your cart ticket is empty.</p>
+                    <ShoppingBag className="w-6 h-6 text-theme-muted mx-auto" />
+                    <p className="text-theme-muted">Your cart ticket is empty.</p>
                     <Link href="/discovery">
                       <button className="text-[11px] text-[#f91814] underline underline-offset-2 uppercase">
                         Browse Kitchens &rarr;
@@ -385,14 +455,14 @@ export default function CheckoutPage() {
                 ) : (
                   items.map((it) => (
                     <div key={it.id} className="space-y-0.5">
-                      <div className="flex justify-between text-[#0B0B0B]">
+                      <div className="flex justify-between text-theme-text">
                         <span className="pr-2">
                           {it.quantity}x {it.name}
                         </span>
                         <span className="shrink-0">Rs. {it.price * it.quantity}</span>
                       </div>
                       {it.selectedModifiers && it.selectedModifiers.length > 0 && (
-                        <div className="text-[10px] text-[#6B6966] pl-3">
+                        <div className="text-[10px] text-theme-muted pl-3">
                           {it.selectedModifiers.map((m) => m.name).join(', ')}
                         </div>
                       )}
@@ -402,16 +472,16 @@ export default function CheckoutPage() {
               </div>
 
               {/* Ledger */}
-              <div className="space-y-2 font-mono text-xs text-[#6B6966]">
+              <div className="space-y-2 font-mono text-xs text-theme-muted">
                 <div className="flex justify-between">
                   <span>Food Subtotal</span>
-                  <span className="text-[#0B0B0B]">Rs. {subtotal}</span>
+                  <span className="text-theme-text">Rs. {subtotal}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Valley Radial Delivery Fee</span>
-                  <span className="text-[#0B0B0B]">Rs. {deliveryFee}</span>
+                  <span className="text-theme-text">Rs. {deliveryFee}</span>
                 </div>
-                <div className="flex justify-between font-bold text-sm sm:text-base text-[#0B0B0B] pt-2 border-t border-[#C8C6C1]">
+                <div className="flex justify-between font-bold text-sm sm:text-base text-theme-text pt-2 border-t border-theme-border">
                   <span>Total Payable</span>
                   <span className="text-[#f91814]">Rs. {total}</span>
                 </div>
@@ -421,7 +491,7 @@ export default function CheckoutPage() {
               <button
                 onClick={handlePlaceOrder}
                 disabled={isSubmitting || (items.length === 0 && subtotal === 0)}
-                className="w-full flex items-center justify-center gap-2 bg-[#f91814] text-[#F5F5F0] border-2 border-[#f91814] py-3.5 sm:py-4 px-6 font-mono text-xs sm:text-sm font-bold uppercase tracking-wider hover:bg-[#0B0B0B] hover:border-[#0B0B0B] hover:shadow-[4px_4px_0px_0px_#f91814] transition-all cursor-pointer disabled:opacity-40 active:translate-x-0.5 active:translate-y-0.5"
+                className="w-full flex items-center justify-center gap-2 bg-[#f91814] text-white border-2 border-[#f91814] py-3.5 sm:py-4 px-6 font-mono text-xs sm:text-sm font-bold uppercase tracking-wider hover:bg-black hover:border-black hover:shadow-[4px_4px_0px_0px_#f91814] transition-all cursor-pointer disabled:opacity-40 active:translate-x-0.5 active:translate-y-0.5"
               >
                 {isSubmitting ? (
                   <>
@@ -436,8 +506,8 @@ export default function CheckoutPage() {
                 )}
               </button>
 
-              <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-[#6B6966] pt-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-theme-muted pt-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Direct Kitchen Telemetry &bull; Nepal ePayments</span>
               </div>
             </div>

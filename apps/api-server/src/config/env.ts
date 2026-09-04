@@ -32,4 +32,7 @@ export const config = {
       process.env.KHALTI_GATEWAY_URL ||
       'https://a.khalti.com/api/v2/epayment/initiate/',
   },
+  sms: {
+    devMode: process.env.SMS_DEV_MODE !== 'false',
+  },
 };

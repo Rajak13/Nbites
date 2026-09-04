@@ -262,7 +262,7 @@ export default function RestaurantDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] text-[#0B0B0B] select-none pb-28">
+    <div className="min-h-screen bg-theme-bg text-theme-text select-none pb-28 transition-colors duration-200">
 
       {/* ── Hero Banner ──────────────────────────────────────────────────────── */}
       <div className="relative w-full h-[52vw] sm:h-[45vw] max-h-[520px] min-h-[300px] bg-[#1A1208] overflow-hidden pt-24">
@@ -273,44 +273,50 @@ export default function RestaurantDetailPage() {
           priority
           className="object-cover opacity-50"
         />
-        {/* Dark-to-cream gradient so the page transitions smoothly from the dark hero */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-[#F5F5F0]" />
+        {/* Dynamic gradient that blends smoothly into current theme background */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 60%, var(--theme-bg) 100%)',
+          }}
+        />
 
         {/* Back Link */}
         <div className="absolute top-6 sm:top-8 left-4 sm:left-8 z-20 mt-16 sm:mt-20">
           <Link
             href="/discovery"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F5F5F0]/90 border border-[#C8C6C1] font-mono text-xs uppercase tracking-wider text-[#0B0B0B] hover:bg-[#0B0B0B] hover:text-[#F5F5F0] hover:border-[#0B0B0B] transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-theme-bg/90 border border-theme-border font-mono text-xs uppercase tracking-wider text-theme-text hover:bg-black hover:text-white hover:border-black transition-colors"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             All Kitchens
           </Link>
         </div>
 
-        {/* Restaurant Info — sits at bottom of hero, transitions into cream */}
+        {/* Restaurant Info */}
         <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-8 pb-6 sm:pb-8 z-20">
           <div className="max-w-5xl mx-auto space-y-2 sm:space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-1 bg-[#f91814] text-[#F5F5F0] font-mono text-[10px] font-bold uppercase tracking-widest">
+              <span className="px-2.5 py-1 bg-[#f91814] text-white font-mono text-[10px] font-bold uppercase tracking-widest">
                 OPEN &bull; {restaurant.estimatedPrepTimeMins} MINS PREP
               </span>
             </div>
 
             <h1
-              className="text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#F5F5F0] leading-[0.9] uppercase drop-shadow-lg"
+              className="text-3xl sm:text-5xl lg:text-6xl tracking-tight text-white leading-[0.9] uppercase drop-shadow-lg"
               style={{ fontFamily: 'var(--font-clubstone), serif' }}
             >
               {restaurant.name}
             </h1>
 
             <p
-              className="font-mono text-xs sm:text-sm text-[#E0DDD8] max-w-2xl leading-relaxed drop-shadow"
+              className="font-mono text-xs sm:text-sm text-zinc-200 max-w-2xl leading-relaxed drop-shadow"
               style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
             >
               {restaurant.tagline}
             </p>
 
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs font-mono text-[#C8C6C1] pt-1">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs font-mono text-zinc-300 pt-1">
               <span className="flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-[#f91814]" />
                 {restaurant.address}
@@ -325,7 +331,7 @@ export default function RestaurantDetailPage() {
       </div>
 
       {/* ── Sticky Category Bar ───────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-30 w-full bg-[#F5F5F0]/95 backdrop-blur-md border-b-2 border-[#C8C6C1]">
+      <div className="sticky top-0 z-30 w-full bg-theme-header backdrop-blur-md border-b-2 border-theme-border">
         <div className="max-w-5xl mx-auto px-4 sm:px-8 py-3">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
             {restaurant.categories.map((cat) => (
@@ -334,8 +340,8 @@ export default function RestaurantDetailPage() {
                 onClick={() => setActiveCategory(cat.id)}
                 className={`px-3 sm:px-4 py-2 font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wider border-2 transition-all shrink-0 cursor-pointer rounded-none ${
                   activeCategory === cat.id
-                    ? 'bg-[#f91814] text-[#F5F5F0] border-[#f91814] shadow-[3px_3px_0px_0px_#0B0B0B]'
-                    : 'bg-transparent text-[#6B6966] border-[#C8C6C1] hover:border-[#0B0B0B] hover:text-[#0B0B0B]'
+                    ? 'bg-[#f91814] text-white border-[#f91814] shadow-[3px_3px_0px_0px_#f91814]'
+                    : 'bg-transparent text-theme-muted border-theme-border hover:border-theme-text hover:text-theme-text'
                 }`}
               >
                 {cat.name}
@@ -349,14 +355,14 @@ export default function RestaurantDetailPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-8 pt-8 sm:pt-10 space-y-12 sm:space-y-16">
         {restaurant.categories.map((cat) => (
           <section key={cat.id} id={cat.id} className="space-y-5 sm:space-y-6">
-            <div className="flex items-center justify-between pb-3 border-b-2 border-[#C8C6C1]">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-theme-border">
               <h2
-                className="text-xl sm:text-2xl md:text-3xl text-[#0B0B0B] tracking-tight uppercase"
+                className="text-xl sm:text-2xl md:text-3xl text-theme-text tracking-tight uppercase"
                 style={{ fontFamily: 'var(--font-clubstone), serif' }}
               >
                 {cat.name}
               </h2>
-              <span className="font-mono text-[10px] text-[#6B6966] uppercase hidden sm:block">
+              <span className="font-mono text-[10px] text-theme-muted uppercase hidden sm:block">
                 {cat.items.length} DISHES
               </span>
             </div>
@@ -365,11 +371,11 @@ export default function RestaurantDetailPage() {
               {cat.items.map((item) => (
                 <div
                   key={item.id}
-                  className="p-4 sm:p-5 bg-[#EDECEA] border-2 border-[#C8C6C1] hover:border-[#f91814] transition-all flex flex-col justify-between group"
+                  className="p-4 sm:p-5 bg-theme-surface border-2 border-theme-border hover:border-[#f91814] transition-all flex flex-col justify-between group"
                 >
                   <div className="flex gap-3 sm:gap-4">
                     {/* Item Image */}
-                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 shrink-0 border-2 border-[#C8C6C1] overflow-hidden bg-[#E0DDD8]">
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 shrink-0 border-2 border-theme-border overflow-hidden bg-black/20">
                       <Image
                         src={item.image}
                         alt={item.name}
@@ -386,19 +392,19 @@ export default function RestaurantDetailPage() {
                             item.isVeg ? 'bg-emerald-600' : 'bg-[#f91814]'
                           }`}
                         />
-                        <span className="font-mono text-[10px] text-[#6B6966] uppercase">
+                        <span className="font-mono text-[10px] text-theme-muted uppercase">
                           {item.prepTime || '15 MINS'}
                         </span>
                       </div>
 
                       <h3
-                        className="text-sm sm:text-base md:text-lg text-[#0B0B0B] tracking-tight leading-snug"
+                        className="text-sm sm:text-base md:text-lg text-theme-text tracking-tight leading-snug"
                         style={{ fontFamily: 'var(--font-clubstone), serif' }}
                       >
                         {item.name}
                       </h3>
 
-                      <p className="font-mono text-[10px] sm:text-xs text-[#6B6966] leading-relaxed line-clamp-2">
+                      <p className="font-mono text-[10px] sm:text-xs text-theme-muted leading-relaxed line-clamp-2">
                         {item.description}
                       </p>
 
@@ -409,11 +415,11 @@ export default function RestaurantDetailPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-end gap-2.5 pt-3 mt-3 border-t border-[#C8C6C1]">
+                  <div className="flex items-center justify-end gap-2.5 pt-3 mt-3 border-t border-theme-border">
                     {item.groups && item.groups.length > 0 ? (
                       <button
                         onClick={() => setCustomizingItem(item)}
-                        className="px-3 sm:px-4 py-2 bg-transparent text-[#0B0B0B] border-2 border-[#0B0B0B] font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wider hover:bg-[#0B0B0B] hover:text-[#F5F5F0] transition-all flex items-center gap-1.5 cursor-pointer"
+                        className="px-3 sm:px-4 py-2 bg-transparent text-theme-text border-2 border-theme-text font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wider hover:bg-[#f91814] hover:text-white hover:border-[#f91814] transition-all flex items-center gap-1.5 cursor-pointer"
                       >
                         <SlidersHorizontal className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                         CUSTOMIZE
@@ -423,8 +429,8 @@ export default function RestaurantDetailPage() {
                         onClick={() => handleQuickAdd(item)}
                         className={`px-3 sm:px-4 py-2 font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wider border-2 transition-all flex items-center gap-1.5 cursor-pointer ${
                           addedItemIds[item.id]
-                            ? 'bg-emerald-600 text-[#F5F5F0] border-emerald-600'
-                            : 'bg-[#f91814] text-[#F5F5F0] border-[#f91814] hover:bg-[#0B0B0B] hover:border-[#0B0B0B]'
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-[#f91814] text-white border-[#f91814] hover:bg-black hover:border-black'
                         }`}
                       >
                         {addedItemIds[item.id] ? (

@@ -1,13 +1,16 @@
 import { Schema, model, Document, Model } from 'mongoose';
 
 export type UserRole = 'CUSTOMER' | 'MERCHANT' | 'DRIVER' | 'ADMIN';
+export type ThemePreference = 'cream' | 'dark';
 
 export interface IUser extends Document {
   phone: string;
   name?: string;
   role: UserRole;
-  restaurantId?: string; // If MERCHANT staff
-  driverId?: string; // If DRIVER
+  themePreference: ThemePreference;
+  lastLoginAt?: Date;
+  restaurantId?: string;
+  driverId?: string;
   savedAddresses?: {
     label: string;
     landmark: string;
@@ -27,6 +30,12 @@ const UserSchema = new Schema<IUser>(
       default: 'CUSTOMER',
       index: true,
     },
+    themePreference: {
+      type: String,
+      enum: ['cream', 'dark'],
+      default: 'cream',
+    },
+    lastLoginAt: { type: Date },
     restaurantId: { type: String },
     driverId: { type: String },
     savedAddresses: [

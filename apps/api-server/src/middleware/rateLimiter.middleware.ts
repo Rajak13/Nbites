@@ -21,3 +21,15 @@ export const paymentRateLimiter = rateLimit({
     message: 'Payment rate limit exceeded. Please wait a moment.',
   },
 });
+
+export const authRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // max 5 OTP requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many verification code requests. Please wait a minute before retrying.',
+  },
+});
+

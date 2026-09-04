@@ -94,11 +94,16 @@ export default function OrderTrackingPage() {
           setEta(o.estimatedDeliveryMins ?? 28);
           if (!stored) {
             setReceipt({
-              id: o.orderNumber, restaurant: o.restaurantId || 'Kitchen',
-              items: o.items || [], total: o.totalPayable || 0,
-              customerName: o.customerName || '', phone: o.customerPhone || '',
-              deliveryAddress: o.deliveryLandmark || '', paymentMethod: o.paymentMethod || '',
-              deliveryPin: o.deliveryPin || '----', placedAt: o.createdAt || new Date().toISOString(),
+              id: o.orderNumber,
+              restaurant: o.restaurant?.name || o.restaurantId || 'Kitchen',
+              items: o.items || [],
+              total: o.financialBreakdown?.totalPayable || o.totalPayable || 0,
+              customerName: o.customer?.name || o.customerName || '',
+              phone: o.customer?.phone || o.customerPhone || '',
+              deliveryAddress: o.deliveryAddress?.landmark || o.deliveryLandmark || '',
+              paymentMethod: o.payment?.method || o.paymentMethod || '',
+              deliveryPin: o.deliveryPin || '----',
+              placedAt: o.createdAt || new Date().toISOString(),
             });
           }
         }
@@ -142,21 +147,21 @@ export default function OrderTrackingPage() {
   // ── Cancelled ────────────────────────────────────────────────────────────
   if (status === 'CANCELLED') {
     return (
-      <main className="min-h-screen bg-[#F5F5F0] flex items-center justify-center px-6">
+      <main className="min-h-screen bg-theme-bg flex items-center justify-center px-6 transition-colors duration-200">
         <div className="text-center max-w-md">
           <div className="text-[100px] sm:text-[120px] leading-none font-mono text-[#f91814] select-none">✕</div>
           <h1
-            className="text-3xl sm:text-4xl uppercase tracking-tight text-[#0B0B0B] mt-6"
+            className="text-3xl sm:text-4xl uppercase tracking-tight text-theme-text mt-6"
             style={{ fontFamily: 'var(--font-clubstone)' }}
           >
             Order Cancelled
           </h1>
-          <p className="text-[#6B6966] mt-4 text-sm font-mono">
+          <p className="text-theme-muted mt-4 text-sm font-mono">
             Your order {orderId} was cancelled. No charge was made.
           </p>
           <Link
             href="/discovery"
-            className="inline-flex items-center gap-2 mt-8 border-2 border-[#0B0B0B] px-6 py-3 text-[#0B0B0B] text-xs font-mono uppercase tracking-widest hover:bg-[#0B0B0B] hover:text-[#F5F5F0] transition-colors"
+            className="inline-flex items-center gap-2 mt-8 border-2 border-theme-border px-6 py-3 text-theme-text text-xs font-mono uppercase tracking-widest hover:bg-[#f91814] hover:text-white hover:border-[#f91814] transition-colors"
           >
             Back to Kitchen Index <ArrowUpRight size={14} />
           </Link>
@@ -166,32 +171,32 @@ export default function OrderTrackingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F5F5F0] text-[#0B0B0B]">
+    <main className="min-h-screen bg-theme-bg text-theme-text transition-colors duration-200">
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="border-b-2 border-[#C8C6C1] bg-[#F5F5F0] sticky top-0 z-40">
+      <header className="border-b-2 border-theme-border bg-theme-bg sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-3">
           <Link
             href="/discovery"
-            className="flex items-center gap-1.5 text-[#6B6966] hover:text-[#0B0B0B] transition-colors font-mono text-[10px] sm:text-xs uppercase tracking-widest shrink-0"
+            className="flex items-center gap-1.5 text-theme-muted hover:text-theme-text transition-colors font-mono text-[10px] sm:text-xs uppercase tracking-widest shrink-0"
           >
             <ChevronLeft size={14} />
             <span className="hidden sm:inline">Kitchen Index</span>
           </Link>
 
           <div className="text-center min-w-0 flex-1">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-[#6B6966]">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted">
               Order Telemetry
             </p>
             <p
-              className="text-xs sm:text-sm uppercase tracking-tight text-[#0B0B0B] truncate"
+              className="text-xs sm:text-sm uppercase tracking-tight text-theme-text truncate"
               style={{ fontFamily: 'var(--font-clubstone)' }}
             >
               {orderId}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[#6B6966] shrink-0">
+          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-theme-muted shrink-0">
             <span
               className="inline-block w-2 h-2 bg-[#f91814]"
               style={{ animation: 'pulse-gps 1.5s ease-in-out infinite' }}
@@ -208,25 +213,25 @@ export default function OrderTrackingPage() {
 
           {/* ETA */}
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-[#6B6966] mb-3">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted mb-3">
               Estimated Arrival
             </p>
             <div className="flex items-end gap-3 sm:gap-4">
               <span
-                className="text-[72px] sm:text-[96px] leading-none text-[#0B0B0B]"
+                className="text-[72px] sm:text-[96px] leading-none text-theme-text"
                 style={{ fontFamily: 'var(--font-clubstone)' }}
               >
                 {status === 'DELIVERED' ? '00' : String(eta).padStart(2, '0')}
               </span>
               <div className="pb-3 sm:pb-4">
                 <p
-                  className="text-xl sm:text-2xl uppercase text-[#6B6966]"
+                  className="text-xl sm:text-2xl uppercase text-theme-muted"
                   style={{ fontFamily: 'var(--font-clubstone)' }}
                 >
                   {status === 'DELIVERED' ? 'DELIVERED' : 'MIN'}
                 </p>
-                <p className="font-mono text-[10px] uppercase tracking-widest text-[#6B6966] mt-1">
-                  {receipt?.restaurant || 'Kitchen'} · placed {placedTime}
+                <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted mt-1">
+                  {receipt?.restaurant || 'Kitchen'} &bull; placed {placedTime}
                 </p>
               </div>
             </div>
@@ -234,7 +239,7 @@ export default function OrderTrackingPage() {
 
           {/* Pipeline */}
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-[#6B6966] mb-5 sm:mb-6">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted mb-5 sm:mb-6">
               Order Pipeline
             </p>
             <div className="space-y-0">
@@ -252,7 +257,7 @@ export default function OrderTrackingPage() {
                             ? 'border-[#f91814] bg-[#f91814]'
                             : isActive
                             ? 'border-[#f91814] bg-transparent'
-                            : 'border-[#C8C6C1] bg-transparent'
+                            : 'border-theme-border bg-transparent'
                         }`}
                       >
                         {isCompleted ? (
@@ -266,7 +271,7 @@ export default function OrderTrackingPage() {
                       {idx < PIPELINE.length - 1 && (
                         <div
                           className={`w-px flex-1 min-h-[28px] sm:min-h-[32px] transition-all duration-700 ${
-                            isCompleted ? 'bg-[#f91814]' : 'bg-[#C8C6C1]'
+                            isCompleted ? 'bg-[#f91814]' : 'bg-theme-border'
                           }`}
                         />
                       )}
@@ -276,7 +281,7 @@ export default function OrderTrackingPage() {
                     <div className={`pb-6 sm:pb-8 ${idx === PIPELINE.length - 1 ? 'pb-0' : ''}`}>
                       <p
                         className={`text-xs sm:text-sm uppercase tracking-widest transition-colors duration-300 ${
-                          isCompleted ? 'text-[#6B6966]' : isActive ? 'text-[#0B0B0B]' : 'text-[#C8C6C1]'
+                          isCompleted ? 'text-theme-muted' : isActive ? 'text-theme-text' : 'text-theme-muted/40'
                         }`}
                         style={{ fontFamily: 'var(--font-clubstone)' }}
                       >
@@ -284,7 +289,7 @@ export default function OrderTrackingPage() {
                       </p>
                       <p
                         className={`font-mono text-[10px] sm:text-[11px] mt-0.5 transition-colors ${
-                          isActive ? 'text-[#6B6966]' : 'text-[#C8C6C1]'
+                          isActive ? 'text-theme-muted' : 'text-theme-muted/40'
                         }`}
                       >
                         {isActive || isCompleted ? step.sub : '—'}
@@ -298,27 +303,27 @@ export default function OrderTrackingPage() {
 
           {/* Rider Card — visible from DISPATCHED onward */}
           {currentStep >= 4 && (
-            <div className="border-2 border-[#C8C6C1] bg-[#EDECEA] p-5 sm:p-6">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[#6B6966] mb-4 sm:mb-5">
+            <div className="border-2 border-theme-border bg-theme-surface p-5 sm:p-6">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted mb-4 sm:mb-5">
                 Your Rider
               </p>
 
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p
-                    className="text-xl sm:text-2xl uppercase text-[#0B0B0B]"
+                    className="text-xl sm:text-2xl uppercase text-theme-text"
                     style={{ fontFamily: 'var(--font-clubstone)' }}
                   >
                     {RIDER.name}
                   </p>
-                  <p className="font-mono text-xs text-[#6B6966] mt-1">{RIDER.zone}</p>
+                  <p className="font-mono text-xs text-theme-muted mt-1">{RIDER.zone}</p>
 
                   <div className="mt-3 sm:mt-4 space-y-1.5">
-                    <div className="flex items-center gap-2 font-mono text-xs text-[#6B6966]">
+                    <div className="flex items-center gap-2 font-mono text-xs text-theme-muted">
                       <Bike size={12} className="text-[#f91814]" />
                       {RIDER.vehicle}
                     </div>
-                    <div className="flex items-center gap-2 font-mono text-xs text-[#6B6966]">
+                    <div className="flex items-center gap-2 font-mono text-xs text-theme-muted">
                       <MapPin size={12} className="text-[#f91814]" />
                       {RIDER.plateNo}
                     </div>
@@ -327,7 +332,7 @@ export default function OrderTrackingPage() {
 
                 <a
                   href={`tel:${RIDER.phone}`}
-                  className="flex items-center gap-2 border-2 border-[#0B0B0B] px-3 sm:px-4 py-2.5 text-[#0B0B0B] font-mono text-xs uppercase tracking-widest hover:bg-[#0B0B0B] hover:text-[#F5F5F0] transition-colors shrink-0"
+                  className="flex items-center gap-2 border-2 border-theme-text px-3 sm:px-4 py-2.5 text-theme-text font-mono text-xs uppercase tracking-widest hover:bg-[#f91814] hover:text-white hover:border-[#f91814] transition-colors shrink-0"
                 >
                   <Phone size={12} /> Call
                 </a>
@@ -336,19 +341,19 @@ export default function OrderTrackingPage() {
           )}
 
           {/* GPS HUD */}
-          <div className="border-2 border-[#C8C6C1] bg-[#EDECEA] p-5 sm:p-6">
+          <div className="border-2 border-theme-border bg-theme-surface p-5 sm:p-6">
             <div className="flex items-center justify-between mb-4">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[#6B6966]">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted">
                 GPS Coordinate Stream
               </p>
-              <span className="font-mono text-[10px] text-[#C8C6C1]">
+              <span className="font-mono text-[10px] text-theme-muted/50">
                 TICK {String(tick).padStart(4, '0')}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-widest text-[#C8C6C1] mb-1">LAT</p>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted/60 mb-1">LAT</p>
                 <p
                   className="text-xl sm:text-2xl text-[#f91814] tabular-nums"
                   style={{ fontFamily: 'var(--font-clubstone)' }}
@@ -357,7 +362,7 @@ export default function OrderTrackingPage() {
                 </p>
               </div>
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-widest text-[#C8C6C1] mb-1">LNG</p>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted/60 mb-1">LNG</p>
                 <p
                   className="text-xl sm:text-2xl text-[#f91814] tabular-nums"
                   style={{ fontFamily: 'var(--font-clubstone)' }}
@@ -367,13 +372,13 @@ export default function OrderTrackingPage() {
               </div>
             </div>
 
-            <div className="mt-4 h-px bg-[#C8C6C1]" />
+            <div className="mt-4 h-px bg-theme-border" />
             <div className="mt-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 font-mono text-[10px] text-[#6B6966] uppercase tracking-widest">
+              <div className="flex items-center gap-2 font-mono text-[10px] text-theme-muted uppercase tracking-widest">
                 <MapPin size={10} className="text-[#f91814]" />
                 Kathmandu Valley
               </div>
-              <div className="font-mono text-[10px] text-[#6B6966] uppercase tracking-widest">
+              <div className="font-mono text-[10px] text-theme-muted uppercase tracking-widest">
                 Turf.js Spatial
               </div>
             </div>
@@ -384,27 +389,27 @@ export default function OrderTrackingPage() {
         <div className="space-y-5 sm:space-y-6">
 
           {/* Delivery PIN — most prominent */}
-          <div className="border-2 border-[#f91814] bg-[#EDECEA] p-5 sm:p-6">
+          <div className="border-2 border-[#f91814] bg-theme-surface p-5 sm:p-6 shadow-[3px_3px_0px_0px_#f91814]">
             <div className="flex items-center gap-2 mb-3 sm:mb-4">
               <Shield size={14} className="text-[#f91814]" />
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[#6B6966]">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted">
                 Delivery Verification PIN
               </p>
             </div>
             <p
-              className="text-6xl sm:text-7xl uppercase tracking-[0.15em] text-[#0B0B0B] text-center py-3 sm:py-4"
+              className="text-6xl sm:text-7xl uppercase tracking-[0.15em] text-theme-text text-center py-3 sm:py-4"
               style={{ fontFamily: 'var(--font-clubstone)' }}
             >
               {receipt?.deliveryPin || '————'}
             </p>
-            <p className="font-mono text-[10px] text-[#6B6966] text-center mt-2">
+            <p className="font-mono text-[10px] text-theme-muted text-center mt-2">
               Share this PIN with your rider only upon delivery
             </p>
           </div>
 
           {/* Order Receipt */}
-          <div className="border-2 border-[#C8C6C1] bg-[#EDECEA] p-5 sm:p-6">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-[#6B6966] mb-4 sm:mb-5">
+          <div className="border-2 border-theme-border bg-theme-surface p-5 sm:p-6">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted mb-4 sm:mb-5">
               Order Receipt
             </p>
 
@@ -413,31 +418,31 @@ export default function OrderTrackingPage() {
                 {receipt.items.map((item, idx) => (
                   <div key={idx} className="flex justify-between items-baseline gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm text-[#0B0B0B] truncate" style={{ fontFamily: 'var(--font-nokie)' }}>
+                      <p className="text-sm text-theme-text truncate" style={{ fontFamily: 'var(--font-nokie)' }}>
                         {item.name}
                       </p>
-                      <p className="font-mono text-[10px] text-[#6B6966]">QTY {item.quantity}</p>
+                      <p className="font-mono text-[10px] text-theme-muted">QTY {item.quantity}</p>
                     </div>
-                    <p className="font-mono text-sm text-[#0B0B0B] shrink-0">
+                    <p className="font-mono text-sm text-theme-text shrink-0">
                       NPR {(item.price * item.quantity).toLocaleString()}
                     </p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="font-mono text-xs text-[#C8C6C1]">Loading items...</p>
+              <p className="font-mono text-xs text-theme-muted">Loading items...</p>
             )}
 
-            <div className="mt-5 pt-4 border-t border-[#C8C6C1] space-y-2">
-              <div className="flex justify-between font-mono text-xs text-[#6B6966]">
+            <div className="mt-5 pt-4 border-t border-theme-border space-y-2">
+              <div className="flex justify-between font-mono text-xs text-theme-muted">
                 <span>Subtotal</span>
                 <span>NPR {receipt ? (receipt.total - 50).toLocaleString() : '—'}</span>
               </div>
-              <div className="flex justify-between font-mono text-xs text-[#6B6966]">
+              <div className="flex justify-between font-mono text-xs text-theme-muted">
                 <span>Delivery</span>
                 <span>NPR 50</span>
               </div>
-              <div className="flex justify-between font-mono text-sm text-[#0B0B0B] pt-2 border-t border-[#C8C6C1]">
+              <div className="flex justify-between font-mono text-sm text-theme-text pt-2 border-t border-theme-border">
                 <span className="uppercase tracking-widest" style={{ fontFamily: 'var(--font-clubstone)' }}>Total</span>
                 <span>NPR {receipt?.total?.toLocaleString() || '—'}</span>
               </div>
@@ -445,49 +450,49 @@ export default function OrderTrackingPage() {
           </div>
 
           {/* Delivery Details */}
-          <div className="border-2 border-[#C8C6C1] bg-[#EDECEA] p-5 sm:p-6 space-y-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-[#6B6966]">
+          <div className="border-2 border-theme-border bg-theme-surface p-5 sm:p-6 space-y-4">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted">
               Delivery Details
             </p>
 
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[#C8C6C1] mb-1">Recipient</p>
-              <p className="text-sm text-[#0B0B0B]" style={{ fontFamily: 'var(--font-nokie)' }}>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted/60 mb-1">Recipient</p>
+              <p className="text-sm text-theme-text" style={{ fontFamily: 'var(--font-nokie)' }}>
                 {receipt?.customerName || '—'}
               </p>
             </div>
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[#C8C6C1] mb-1">Phone</p>
-              <p className="font-mono text-sm text-[#0B0B0B]">{receipt?.phone || '—'}</p>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted/60 mb-1">Phone</p>
+              <p className="font-mono text-sm text-theme-text">{receipt?.phone || '—'}</p>
             </div>
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[#C8C6C1] mb-1">Address</p>
-              <p className="text-sm text-[#6B6966]" style={{ fontFamily: 'var(--font-nokie)' }}>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted/60 mb-1">Address</p>
+              <p className="text-sm text-theme-muted" style={{ fontFamily: 'var(--font-nokie)' }}>
                 {receipt?.deliveryAddress || '—'}
               </p>
             </div>
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[#C8C6C1] mb-1">Payment</p>
-              <span className="font-mono text-xs text-[#0B0B0B] border border-[#C8C6C1] px-2 py-0.5 uppercase tracking-widest">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted/60 mb-1">Payment</p>
+              <span className="font-mono text-xs text-theme-text border border-theme-border px-2 py-0.5 uppercase tracking-widest">
                 {receipt?.paymentMethod || '—'}
               </span>
             </div>
           </div>
 
           {/* Help */}
-          <div className="border-2 border-[#C8C6C1] p-5 sm:p-6">
+          <div className="border-2 border-theme-border p-5 sm:p-6">
             <div className="flex items-center gap-2 mb-3">
-              <Clock size={12} className="text-[#6B6966]" />
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[#6B6966]">
+              <Clock size={12} className="text-theme-muted" />
+              <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted">
                 Need Help?
               </p>
             </div>
-            <p className="font-mono text-xs text-[#6B6966] mb-4">
+            <p className="font-mono text-xs text-theme-muted mb-4">
               If there&apos;s an issue with your order, our team is available 07:00–23:00 NPT.
             </p>
             <Link
               href="/"
-              className="flex items-center justify-between border border-[#C8C6C1] px-4 py-3 text-[#6B6966] hover:border-[#0B0B0B] hover:text-[#0B0B0B] transition-colors group"
+              className="flex items-center justify-between border border-theme-border px-4 py-3 text-theme-muted hover:border-[#f91814] hover:text-theme-text transition-colors group"
             >
               <span className="font-mono text-xs uppercase tracking-widest">nBites Support</span>
               <ArrowUpRight size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
