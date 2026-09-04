@@ -112,17 +112,48 @@ export class OrderController {
       const platformFee = 0;
       const totalPayable = foodSubtotal + deliveryFee + packagingFee + platformFee;
 
-      // 3. PRD COD Fraud limit (< NPR 5,000)
-      if (validated.paymentMethod === 'COD' && totalPayable > 5000) {
+      // 3. Spatial Delivery Radius Enforcement (Protects against cross-city food waste)
+      const maxAllowedRadiusKm = 12;
+      if (deliveryDistanceKm > maxAllowedRadiusKm) {
         res.status(400).json({
           success: false,
           error: {
-            code: 'COD_LIMIT_EXCEEDED',
-            message:
-              'Cash on Delivery is limited to orders under NPR 5,000 as per anti-fraud rules.',
+            code: 'OUT_OF_DELIVERY_RADIUS',
+            message: `Delivery location is ${Math.round(deliveryDistanceKm)} km away. ${restaurant.name} (${restaurant.city || 'local sector'}) only delivers within ${maxAllowedRadiusKm} km to guarantee hot food quality.`,
+            details: {
+              deliveryDistanceKm: Math.round(deliveryDistanceKm),
+              maxAllowedRadiusKm,
+              restaurantCity: restaurant.city,
+            },
           },
         });
         return;
+      }
+
+      // 4. PRD COD Anti-Food-Waste & Anti-Fraud Protection
+      if (validated.paymentMethod === 'COD') {
+        if (totalPayable > 5000) {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'COD_LIMIT_EXCEEDED',
+              message:
+                'Cash on Delivery is limited to orders under NPR 5,000 as per anti-fraud rules.',
+            },
+          });
+          return;
+        }
+
+        if (deliveryDistanceKm > 6) {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'COD_DISTANCE_EXCEEDED',
+              message: `Cash on Delivery is restricted to within 6 km of ${restaurant.name}. For deliveries beyond 6 km (${Math.round(deliveryDistanceKm)} km), please pre-pay via eSewa or Khalti to confirm your kitchen order.`,
+            },
+          });
+          return;
+        }
       }
 
       // 4. Generate unique identifiers

@@ -14,6 +14,7 @@ import {
   ShoppingBag,
   Clock,
   Compass,
+  AlertTriangle,
 } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 import { useAuthStore } from '@/lib/auth';
@@ -21,6 +22,7 @@ import { getApiBaseUrl } from '@/lib/api-config';
 import { generateDeliverySlots, DeliverySlot } from '@/lib/delivery-slots';
 import { searchKathmanduLocations, KathmanduLocation } from '@/lib/kathmandu-locations';
 import { LocationPickerModal } from '@/components/location/LocationPickerModal';
+import { calculateHaversineDistanceKm } from '@/lib/utils';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -140,6 +142,41 @@ export default function CheckoutPage() {
   const total = getTotal();
   const activeRestaurant = getActiveRestaurant();
 
+  // Estimate distance from active kitchen to delivery spot to prevent cross-city food waste
+  const restaurantCoords = React.useMemo(() => {
+    const id = (activeRestaurant?.id || '').toLowerCase();
+    const name = (activeRestaurant?.name || '').toLowerCase();
+    if (id.includes('pkr') || name.includes('lakeside') || name.includes('pokhara')) {
+      return { lat: 28.2096, lng: 83.9595, city: 'Pokhara' };
+    }
+    if (id.includes('chit') || name.includes('chitwan') || name.includes('bharatpur')) {
+      return { lat: 27.6833, lng: 84.4333, city: 'Chitwan' };
+    }
+    if (id.includes('dharan') || name.includes('dharan')) {
+      return { lat: 26.8124, lng: 87.2835, city: 'Dharan' };
+    }
+    return { lat: 27.6784, lng: 85.3168, city: 'Kathmandu' };
+  }, [activeRestaurant]);
+
+  const deliveryDistanceKm = React.useMemo(() => {
+    return calculateHaversineDistanceKm(
+      restaurantCoords.lat,
+      restaurantCoords.lng,
+      deliveryCoords.lat,
+      deliveryCoords.lng
+    );
+  }, [restaurantCoords, deliveryCoords]);
+
+  const isOutOfRadius = deliveryDistanceKm > 12;
+  const isCodRestricted = deliveryDistanceKm > 6;
+
+  // Auto switch away from COD if distance exceeds 6 km
+  React.useEffect(() => {
+    if (isCodRestricted && paymentMethod === 'COD') {
+      setPaymentMethod('ESEWA');
+    }
+  }, [isCodRestricted, paymentMethod]);
+
   const validateNepalPhone = (num: string) => {
     const clean = num.replace(/\D/g, '');
     return /^(?:977)?9[78]\d{8}$/.test(clean);
@@ -155,8 +192,22 @@ export default function CheckoutPage() {
     }
     setPhoneError('');
 
+    if (isOutOfRadius) {
+      alert(
+        `Order Blocked: ${activeRestaurant?.name || 'This kitchen'} is ${deliveryDistanceKm} km away in ${restaurantCoords.city}. Maximum delivery radius is 12 km to prevent food waste.`
+      );
+      return;
+    }
+
     if (paymentMethod === 'COD' && total > 5000) {
       alert('Cash on delivery is limited to orders under NPR 5,000 as per platform anti-fraud rules.');
+      return;
+    }
+
+    if (paymentMethod === 'COD' && isCodRestricted) {
+      alert(
+        `Cash on Delivery is limited to within 6 km of the kitchen. For ${deliveryDistanceKm} km, please select eSewa or Khalti to prevent food waste.`
+      );
       return;
     }
 
@@ -261,6 +312,13 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = () => {
+    if (isOutOfRadius) {
+      alert(
+        `Order Blocked: ${activeRestaurant?.name || 'This kitchen'} is ${deliveryDistanceKm} km away in ${restaurantCoords.city}. Maximum delivery radius is 12 km to prevent food waste.`
+      );
+      return;
+    }
+
     // If not authenticated, open the OTP verification modal first
     if (!token || !user) {
       openAuthModal(() => {
@@ -471,6 +529,36 @@ export default function CheckoutPage() {
                   </span>
                   <span className="text-[#f91814] font-bold">NEPAL DISPATCH</span>
                 </div>
+
+                {/* Spatial Radius Protection Warning */}
+                {isOutOfRadius && (
+                  <div className="mt-3 p-3 sm:p-4 border-2 border-[#f91814] bg-[#f91814]/15 text-theme-text space-y-2 font-mono text-xs">
+                    <div className="flex items-center gap-2 text-[#f91814] font-bold">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span>OUT OF SERVICE RADIUS ({deliveryDistanceKm} KM AWAY)</span>
+                    </div>
+                    <p className="text-theme-muted text-[11px] leading-relaxed">
+                      {activeRestaurant?.name || 'This kitchen'} is in {restaurantCoords.city} and only delivers within 12 km to prevent food spoilage. Your drop-off spot is {deliveryDistanceKm} km away.
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Link href="/discovery">
+                        <button
+                          type="button"
+                          className="px-3 py-1 bg-[#f91814] text-white font-bold text-[10px] uppercase tracking-wider hover:bg-black transition-colors cursor-pointer"
+                        >
+                          Find Kitchens Near You &rarr;
+                        </button>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setIsMapModalOpen(true)}
+                        className="px-3 py-1 border border-theme-border text-theme-text font-bold text-[10px] uppercase tracking-wider hover:border-[#f91814] transition-colors cursor-pointer"
+                      >
+                        Change Drop-off Spot
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Drop-off */}
@@ -641,11 +729,21 @@ export default function CheckoutPage() {
 
                 {/* COD */}
                 <div
-                  onClick={() => setPaymentMethod('COD')}
-                  className={`cursor-pointer border-2 p-4 flex items-center justify-between transition-colors ${
-                    paymentMethod === 'COD'
-                      ? 'border-[#f91814] bg-[#f91814]/10'
-                      : 'border-theme-border bg-theme-bg hover:border-zinc-500'
+                  onClick={() => {
+                    if (isCodRestricted) {
+                      alert(
+                        `Cash on Delivery is limited to within 6 km of the kitchen. For ${deliveryDistanceKm} km delivery, please select eSewa or Khalti to prevent food waste.`
+                      );
+                      return;
+                    }
+                    setPaymentMethod('COD');
+                  }}
+                  className={`border-2 p-4 flex items-center justify-between transition-colors ${
+                    isCodRestricted
+                      ? 'border-theme-border bg-theme-surface opacity-50 cursor-not-allowed'
+                      : paymentMethod === 'COD'
+                      ? 'cursor-pointer border-[#f91814] bg-[#f91814]/10'
+                      : 'cursor-pointer border-theme-border bg-theme-bg hover:border-zinc-500'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -653,9 +751,18 @@ export default function CheckoutPage() {
                       COD
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-theme-text">Cash / QR on Delivery</div>
+                      <div className="font-bold text-sm text-theme-text flex items-center gap-2">
+                        <span>Cash / QR on Delivery</span>
+                        {isCodRestricted && (
+                          <span className="text-[9px] text-[#f91814] border border-[#f91814] px-1.5 py-0.5 font-mono uppercase font-bold">
+                            Pre-pay required (&gt;6 km)
+                          </span>
+                        )}
+                      </div>
                       <div className="text-[11px] text-theme-muted">
-                        Pay rider in cash or Fonepay QR upon arrival (Max Rs. 5,000)
+                        {isCodRestricted
+                          ? `Unavailable: Kitchen is ${deliveryDistanceKm} km away. Digital pre-pay required to avoid food waste.`
+                          : 'Pay rider in cash or Fonepay QR upon arrival (Max Rs. 5,000)'}
                       </div>
                     </div>
                   </div>
@@ -728,13 +835,18 @@ export default function CheckoutPage() {
               {/* Submit */}
               <button
                 onClick={handlePlaceOrder}
-                disabled={isSubmitting || (items.length === 0 && subtotal === 0)}
+                disabled={isSubmitting || isOutOfRadius || (items.length === 0 && subtotal === 0)}
                 className="w-full flex items-center justify-center gap-2 bg-[#f91814] text-white border-2 border-[#f91814] py-3.5 sm:py-4 px-6 font-mono text-xs sm:text-sm font-bold uppercase tracking-wider hover:bg-black hover:border-black hover:shadow-[4px_4px_0px_0px_#f91814] transition-all cursor-pointer disabled:opacity-40 active:translate-x-0.5 active:translate-y-0.5"
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span>CONFIRMING YOUR ORDER...</span>
+                  </>
+                ) : isOutOfRadius ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>OUT OF DELIVERY RANGE ({deliveryDistanceKm} KM)</span>
                   </>
                 ) : (
                   <>
