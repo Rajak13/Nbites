@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { clubstoneFont, nokieFont } from '@/lib/fonts';
 import { SmoothScrollProvider } from '@/components/common/SmoothScrollProvider';
 import { CookieConsent } from '@/components/common/CookieConsent';
@@ -6,6 +6,13 @@ import { CartDrawer } from '@/components/cart/CartDrawer';
 import { ThemeProvider } from '@/components/common/ThemeProvider';
 import { OtpModal } from '@/components/auth/OtpModal';
 import './globals.css';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: 'nBites | Hyper-Local Culinary Logistics Engine',
