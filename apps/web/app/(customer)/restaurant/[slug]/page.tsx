@@ -14,6 +14,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
+import { useAuthStore } from '@/lib/auth';
 import {
   ItemCustomizationModal,
   MenuItemDetail,
@@ -207,6 +208,12 @@ export default function RestaurantDetailPage() {
 
   const addItem = useCartStore((state) => state.addItem);
 
+  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+  const openAuthModal = useAuthStore((state) => state.openAuthModal);
+
+  const isAuthenticated = Boolean(token && user);
+
   React.useEffect(() => {
     async function loadRestaurant() {
       try {
@@ -262,6 +269,50 @@ export default function RestaurantDetailPage() {
     }, 1500);
   };
 
+  // If user is not authenticated, render the editorial security lock
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-theme-bg text-theme-text select-none flex items-center justify-center p-6 transition-colors duration-200">
+        <div className="max-w-md w-full border-2 border-theme-border bg-theme-surface p-6 sm:p-8 space-y-6 shadow-[5px_5px_0px_0px_#f91814] text-center">
+          <div className="w-12 h-12 bg-[#f91814] text-white flex items-center justify-center mx-auto">
+            <span className="font-mono text-lg font-black tracking-widest">!</span>
+          </div>
+
+          <div className="space-y-2">
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#f91814] font-bold">
+              SECURITY DISPATCH // KITCHEN TELEMETRY
+            </div>
+            <h1
+              className="text-3xl font-black uppercase tracking-tight"
+              style={{ fontFamily: 'var(--font-clubstone)' }}
+            >
+              AUTHENTICATION REQUIRED.
+            </h1>
+            <p className="font-mono text-xs text-theme-muted leading-relaxed">
+              Real-time kitchen line dispatch and ingredient customization require a verified Nepal mobile session.
+            </p>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <button
+              onClick={() => openAuthModal()}
+              className="w-full py-3.5 px-6 bg-[#f91814] text-white font-mono text-xs font-bold uppercase tracking-wider border-2 border-[#f91814] hover:bg-black hover:border-black hover:shadow-[3px_3px_0px_0px_#f91814] transition-all cursor-pointer"
+            >
+              VERIFY PHONE &amp; ENTER KITCHEN
+            </button>
+
+            <Link
+              href="/discovery"
+              className="block font-mono text-[11px] text-theme-muted hover:text-theme-text uppercase tracking-wider underline"
+            >
+              &larr; Back to Kitchen Index
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-theme-bg text-theme-text select-none pb-28 transition-colors duration-200">
 
@@ -299,7 +350,7 @@ export default function RestaurantDetailPage() {
           <div className="max-w-5xl mx-auto space-y-2 sm:space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-1 bg-[#f91814] text-white font-mono text-[10px] font-bold uppercase tracking-widest">
-                OPEN &bull; {restaurant.estimatedPrepTimeMins} MINS PREP
+                OPEN &bull; FRESH CRAFTED
               </span>
             </div>
 
@@ -393,8 +444,8 @@ export default function RestaurantDetailPage() {
                             item.isVeg ? 'bg-emerald-600' : 'bg-[#f91814]'
                           }`}
                         />
-                        <span className="font-mono text-[10px] text-theme-muted uppercase">
-                          {item.prepTime || '15 MINS'}
+                        <span className="font-mono text-[10px] text-theme-muted uppercase font-bold tracking-wider">
+                          {item.isVeg ? 'VEGETARIAN' : 'NON-VEGETARIAN'}
                         </span>
                       </div>
 

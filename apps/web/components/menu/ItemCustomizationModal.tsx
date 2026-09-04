@@ -130,7 +130,7 @@ export function ItemCustomizationModal({ item, onClose }: ItemCustomizationModal
             <div className="flex items-center gap-2 mb-1">
               <span className={`w-2 h-2 rounded-full ${item.isVeg ? 'bg-emerald-500' : 'bg-[#f91814]'}`} />
               <span className="font-mono text-[10px] text-[#A1A1AA] uppercase tracking-widest">
-                {item.restaurantName} &bull; {item.prepTime} PREP
+                {item.restaurantName} &bull; {item.isVeg ? 'VEGETARIAN' : 'NON-VEGETARIAN'}
               </span>
             </div>
             <h3

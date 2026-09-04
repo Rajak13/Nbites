@@ -59,6 +59,8 @@ export interface IOrder extends Document {
     gatewayRefId?: string;
   };
   deliveryPin: string;
+  deliveryTiming?: 'ASAP' | 'SCHEDULED';
+  scheduledSlot?: string;
   assignedDriver?: {
     driverId: string;
     name: string;
@@ -151,6 +153,12 @@ const OrderSchema = new Schema<IOrder>(
       gatewayRefId: { type: String },
     },
     deliveryPin: { type: String, required: true },
+    deliveryTiming: {
+      type: String,
+      enum: ['ASAP', 'SCHEDULED'],
+      default: 'ASAP',
+    },
+    scheduledSlot: { type: String },
     assignedDriver: {
       driverId: String,
       name: String,

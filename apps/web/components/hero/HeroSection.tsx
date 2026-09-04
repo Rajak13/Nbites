@@ -120,7 +120,7 @@ export function HeroSection() {
       onTouchEnd={handleTouchEnd}
     >
       {/* Top Global Header with Dynamic Nav Colors & [nBites] Brand */}
-      <Header theme={slide.theme} />
+      <Header theme={slide.theme} isHero={true} />
 
       {/* Background Image Carousel Layer (Optimized Images, 500ms Smooth Transition) */}
       <div className="absolute inset-x-0 top-0 bottom-[44px] z-0 overflow-hidden pointer-events-none">

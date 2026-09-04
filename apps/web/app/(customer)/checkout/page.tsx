@@ -12,10 +12,15 @@ import {
   Loader2,
   ShieldCheck,
   ShoppingBag,
+  Clock,
+  Compass,
 } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 import { useAuthStore } from '@/lib/auth';
 import { getApiBaseUrl } from '@/lib/api-config';
+import { generateDeliverySlots, DeliverySlot } from '@/lib/delivery-slots';
+import { searchKathmanduLocations, KathmanduLocation } from '@/lib/kathmandu-locations';
+import { LocationPickerModal } from '@/components/location/LocationPickerModal';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -40,7 +45,86 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [phoneError, setPhoneError] = React.useState('');
 
-  // Pre-fill user information if authenticated
+  // Delivery Timing State
+  const [deliveryTiming, setDeliveryTiming] = React.useState<'ASAP' | 'SCHEDULED'>('ASAP');
+  const availableSlots = React.useMemo(() => generateDeliverySlots(22), []);
+  const [scheduledSlot, setScheduledSlot] = React.useState<string>(
+    availableSlots.length > 0 ? availableSlots[0].label : ''
+  );
+
+  // Map & Location State
+  const [isMapModalOpen, setIsMapModalOpen] = React.useState(false);
+  const [deliveryCoords, setDeliveryCoords] = React.useState<{ lat: number; lng: number }>({
+    lat: 27.7172,
+    lng: 85.324,
+  });
+  const [locationSuggestions, setLocationSuggestions] = React.useState<KathmanduLocation[]>([]);
+  const [showSuggestions, setShowSuggestions] = React.useState(false);
+
+  const [isSearchingGeocode, setIsSearchingGeocode] = React.useState(false);
+
+  const handleLandmarkChange = (val: string) => {
+    setLandmark(val);
+    if (val.trim().length >= 2) {
+      // 1. Instant Nepal hubs search
+      const localHits = searchKathmanduLocations(val);
+      setLocationSuggestions(localHits);
+      setShowSuggestions(true);
+
+      // 2. Live OpenStreetMap Nominatim Nepal search
+      setIsSearchingGeocode(true);
+      const controller = new AbortController();
+      fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          val
+        )}&countrycodes=np&limit=6&addressdetails=1`,
+        { signal: controller.signal }
+      )
+        .then((r) => (r.ok ? r.json() : []))
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            const osmHits: KathmanduLocation[] = data.map((item: any) => ({
+              id: `osm-${item.place_id}`,
+              name: item.name || item.display_name.split(',')[0],
+              landmark: item.display_name,
+              zone: item.address?.suburb || item.address?.neighbourhood || item.address?.city || 'Nepal',
+              city: item.address?.city || item.address?.town || item.address?.state || 'Nepal',
+              region: 'All Nepal',
+              lat: parseFloat(item.lat),
+              lng: parseFloat(item.lon),
+            }));
+
+            setLocationSuggestions((prev) => {
+              const existingNames = new Set(prev.map((p) => p.name.toLowerCase()));
+              const newUnique = osmHits.filter((h) => !existingNames.has(h.name.toLowerCase()));
+              return [...prev, ...newUnique];
+            });
+          }
+        })
+        .catch(() => {
+          // Keep local hits if offline or rate-limited
+        })
+        .finally(() => {
+          setIsSearchingGeocode(false);
+        });
+    } else {
+      setLocationSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSelectSuggestion = (loc: KathmanduLocation) => {
+    setLandmark(`${loc.name}, ${loc.landmark}`);
+    setDeliveryCoords({ lat: loc.lat, lng: loc.lng });
+    setShowSuggestions(false);
+  };
+
+  const handleLocationPicked = (loc: { landmark: string; lat: number; lng: number }) => {
+    setLandmark(loc.landmark);
+    setDeliveryCoords({ lat: loc.lat, lng: loc.lng });
+  };
+
+  // Pre-fill user information only if authenticated with saved details
   React.useEffect(() => {
     if (user) {
       if (user.phone && !phone) setPhone(user.phone);
@@ -48,10 +132,6 @@ export default function CheckoutPage() {
       if (user.savedAddresses && user.savedAddresses.length > 0 && !landmark) {
         setLandmark(user.savedAddresses[0].landmark);
       }
-    } else {
-      if (!phone) setPhone('9841234567');
-      if (!name) setName('Aayush Shrestha');
-      if (!landmark) setLandmark('Lazimpat Heights, Ward 2, Near British Embassy');
     }
   }, [user]);
 
@@ -82,7 +162,7 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
 
-    const generatedFallbackId = `ORD-KTM-${Math.floor(1000 + Math.random() * 9000)}`;
+    const generatedFallbackId = `ORD-NP-${Math.floor(1000 + Math.random() * 9000)}`;
 
     try {
       const apiUrl = getApiBaseUrl();
@@ -91,10 +171,12 @@ export default function CheckoutPage() {
         customerPhone: activePhone.replace(/\D/g, ''),
         customerName: activeName,
         restaurantId: activeRestaurant?.id || 'rest-ktm-1',
-        deliveryLandmark: landmark || 'Kathmandu Valley Gate',
+        deliveryLandmark: landmark || 'Nepal Delivery Point',
         dropoffInstruction: dropoffOption,
-        deliveryLat: 27.7172,
-        deliveryLng: 85.324,
+        deliveryLat: deliveryCoords.lat,
+        deliveryLng: deliveryCoords.lng,
+        deliveryTiming,
+        scheduledSlot: deliveryTiming === 'SCHEDULED' ? scheduledSlot : undefined,
         items: items.length > 0
           ? items.map((i) => ({
               menuItemId: i.menuItemId,
@@ -132,6 +214,10 @@ export default function CheckoutPage() {
             customerName: activeName,
             phone: activePhone,
             deliveryAddress: landmark,
+            deliveryTiming,
+            scheduledSlot: deliveryTiming === 'SCHEDULED' ? scheduledSlot : undefined,
+            deliveryLat: deliveryCoords.lat,
+            deliveryLng: deliveryCoords.lng,
             paymentMethod,
             deliveryPin: json.data?.order?.deliveryPin || '8492',
             placedAt: new Date().toISOString(),
@@ -157,6 +243,10 @@ export default function CheckoutPage() {
         customerName: activeName,
         phone: activePhone,
         deliveryAddress: landmark,
+        deliveryTiming,
+        scheduledSlot: deliveryTiming === 'SCHEDULED' ? scheduledSlot : undefined,
+        deliveryLat: deliveryCoords.lat,
+        deliveryLng: deliveryCoords.lng,
         paymentMethod,
         deliveryPin: '8492',
         placedAt: new Date().toISOString(),
@@ -191,7 +281,7 @@ export default function CheckoutPage() {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-[#f91814]" />
             <span className="font-mono text-[10px] sm:text-xs text-[#f91814] uppercase tracking-[0.2em] font-bold">
-              STEP 02 // TICKET CONFIRMATION
+              STEP 02 // ORDER CHECKOUT
             </span>
           </div>
           <h1
@@ -204,7 +294,7 @@ export default function CheckoutPage() {
             className="font-mono text-xs text-theme-muted"
             style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
           >
-            Direct phone-first dispatch. Verified via real-time mobile OTP telemetry.
+            Direct phone-first dispatch. Verified via secure mobile OTP across Nepal.
           </p>
         </div>
 
@@ -218,7 +308,7 @@ export default function CheckoutPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-theme-border pb-3 gap-2">
                 <span className="font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                   <Phone className="w-4 h-4 text-[#f91814]" />
-                  Contact &amp; Delivery Identity
+                  Contact &amp; Delivery Details
                 </span>
                 {user ? (
                   <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-bold flex items-center gap-1">
@@ -227,7 +317,7 @@ export default function CheckoutPage() {
                   </span>
                 ) : (
                   <span className="font-mono text-[10px] text-theme-muted uppercase font-bold">
-                    OTP GATEWAY ON SUBMISSION
+                    PHONE VERIFICATION REQUIRED
                   </span>
                 )}
               </div>
@@ -302,20 +392,84 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Landmark */}
-              <div className="space-y-1.5 font-mono text-xs">
-                <label className="text-theme-muted uppercase tracking-wider block">
-                  Delivery Landmark / Address <span className="text-[#f91814]">*</span>
-                </label>
-                <div className="flex items-start border-2 border-theme-border bg-theme-bg p-3 focus-within:border-[#f91814] transition-colors">
+              {/* Landmark & Map Pinning */}
+              <div className="space-y-1.5 font-mono text-xs relative">
+                <div className="flex items-center justify-between">
+                  <label className="text-theme-muted uppercase tracking-wider block">
+                    Delivery Landmark / Address <span className="text-[#f91814]">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsMapModalOpen(true)}
+                    className="flex items-center gap-1.5 text-[10px] font-mono text-[#f91814] hover:text-theme-text font-bold uppercase tracking-wider border border-[#f91814] hover:border-theme-text px-2 py-0.5 transition-colors cursor-pointer bg-theme-bg"
+                  >
+                    <Compass className="w-3 h-3 text-[#f91814]" />
+                    <span>Pick on Map / GPS</span>
+                  </button>
+                </div>
+
+                <div className="flex items-start border-2 border-theme-border bg-theme-bg p-3 focus-within:border-[#f91814] transition-colors relative">
                   <MapPin className="w-4 h-4 text-[#f91814] mr-2 shrink-0 mt-0.5" />
                   <textarea
                     rows={2}
                     value={landmark}
-                    onChange={(e) => setLandmark(e.target.value)}
+                    onChange={(e) => handleLandmarkChange(e.target.value)}
+                    onFocus={() => {
+                      if (landmark.trim().length >= 2) {
+                        const hits = searchKathmanduLocations(landmark);
+                        setLocationSuggestions(hits);
+                        setShowSuggestions(hits.length > 0);
+                      }
+                    }}
                     placeholder="e.g. Lazimpat Heights, Ward 2, Near British Embassy, Blue gate..."
                     className="flex-1 bg-transparent text-theme-text focus:outline-none text-xs font-mono resize-none"
                   />
+                </div>
+
+                {/* Autocompletion suggestions dropdown */}
+                {showSuggestions && locationSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-theme-bg border-2 border-theme-border shadow-lg max-h-48 overflow-y-auto">
+                    <div className="p-1.5 bg-theme-surface border-b border-theme-border flex items-center justify-between font-mono text-[9px] text-theme-muted uppercase tracking-wider">
+                      <div className="flex items-center gap-2">
+                        <span>Nepal Location Suggestions</span>
+                        {isSearchingGeocode && (
+                          <span className="text-[#f91814] text-[8px] animate-pulse">
+                            Searching nationwide...
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowSuggestions(false)}
+                        className="text-theme-muted hover:text-theme-text cursor-pointer"
+                      >
+                        CLOSE
+                      </button>
+                    </div>
+                    {locationSuggestions.map((loc) => (
+                      <div
+                        key={loc.id}
+                        onClick={() => handleSelectSuggestion(loc)}
+                        className="p-2 border-b border-theme-border/50 hover:bg-[#f91814]/10 cursor-pointer transition-colors"
+                      >
+                        <div className="font-bold text-xs text-theme-text flex items-center justify-between">
+                          <span>{loc.name}</span>
+                          <span className="text-[10px] text-theme-muted font-normal uppercase">
+                            {loc.city}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-theme-muted truncate">{loc.landmark}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* GPS Coordinates Readout */}
+                <div className="flex items-center justify-between text-[10px] font-mono text-theme-muted pt-0.5">
+                  <span className="truncate">
+                    PINNED GPS: LAT {deliveryCoords.lat.toFixed(4)}, LNG {deliveryCoords.lng.toFixed(4)}
+                  </span>
+                  <span className="text-[#f91814] font-bold">NEPAL DISPATCH</span>
                 </div>
               </div>
 
@@ -347,7 +501,90 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* 2. Payment Selector */}
+            {/* 2. Delivery Timing (ASAP vs Scheduled) */}
+            <div className="border-2 border-theme-border bg-theme-surface p-5 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-theme-border pb-3">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#f91814]" />
+                  Delivery Schedule &amp; Timing
+                </span>
+                <span className="font-mono text-[10px] text-[#f91814] uppercase font-bold">
+                  {deliveryTiming === 'ASAP' ? 'IMMEDIATE DISPATCH' : `TARGET: ${scheduledSlot}`}
+                </span>
+              </div>
+
+              {/* Timing Toggle */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeliveryTiming('ASAP')}
+                  className={`p-3 border-2 font-mono text-left transition-colors cursor-pointer rounded-none ${
+                    deliveryTiming === 'ASAP'
+                      ? 'border-[#f91814] bg-[#f91814]/10 text-theme-text'
+                      : 'border-theme-border bg-theme-bg text-theme-muted hover:border-theme-text'
+                  }`}
+                >
+                  <div className="font-bold text-xs sm:text-sm text-theme-text">DELIVER NOW (ASAP)</div>
+                  <div className="text-[10px] text-theme-muted mt-0.5">
+                    Standard dispatch &bull; ~25-35 mins
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDeliveryTiming('SCHEDULED')}
+                  className={`p-3 border-2 font-mono text-left transition-colors cursor-pointer rounded-none ${
+                    deliveryTiming === 'SCHEDULED'
+                      ? 'border-[#f91814] bg-[#f91814]/10 text-theme-text'
+                      : 'border-theme-border bg-theme-bg text-theme-muted hover:border-theme-text'
+                  }`}
+                >
+                  <div className="font-bold text-xs sm:text-sm text-theme-text">SCHEDULE ARRIVAL</div>
+                  <div className="text-[10px] text-theme-muted mt-0.5">
+                    Pick 20-min window for later
+                  </div>
+                </button>
+              </div>
+
+              {/* Slot Selector when Scheduled */}
+              {deliveryTiming === 'SCHEDULED' && (
+                <div className="space-y-2 pt-2 border-t border-theme-border">
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-theme-muted uppercase tracking-wider">
+                      Select Target Window (+30m lead, 20m increments):
+                    </span>
+                    <span className="text-[#f91814] font-bold">{scheduledSlot}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1">
+                    {availableSlots.map((slot) => {
+                      const isSelected = scheduledSlot === slot.label;
+                      return (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          onClick={() => setScheduledSlot(slot.label)}
+                          className={`p-2.5 border-2 text-center font-mono text-xs transition-colors cursor-pointer rounded-none ${
+                            isSelected
+                              ? 'border-[#f91814] bg-[#f91814] text-white font-bold shadow-[2px_2px_0px_0px_#18120e]'
+                              : 'border-theme-border bg-theme-bg text-theme-text hover:border-[#f91814]'
+                          }`}
+                        >
+                          <div className="font-bold">{slot.time}</div>
+                          {slot.isTomorrow && (
+                            <div className="text-[9px] uppercase tracking-wider opacity-80">
+                              Tomorrow
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Payment Selector */}
             <div className="border-2 border-theme-border bg-theme-surface p-5 sm:p-6 space-y-4">
               <span className="font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b border-theme-border pb-3">
                 <CreditCard className="w-4 h-4 text-[#f91814]" />
@@ -369,9 +606,9 @@ export default function CheckoutPage() {
                       eSewa
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-theme-text">eSewa v2 Instant Pay</div>
+                      <div className="font-bold text-sm text-theme-text">eSewa Instant Pay</div>
                       <div className="text-[11px] text-theme-muted">
-                        Official HMAC-SHA256 signature checkout
+                        Official eSewa Nepal Secure Checkout
                       </div>
                     </div>
                   </div>
@@ -479,7 +716,7 @@ export default function CheckoutPage() {
                   <span className="text-theme-text">Rs. {subtotal}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Valley Radial Delivery Fee</span>
+                  <span>Direct Delivery Fee</span>
                   <span className="text-theme-text">Rs. {deliveryFee}</span>
                 </div>
                 <div className="flex justify-between font-bold text-sm sm:text-base text-theme-text pt-2 border-t border-theme-border">
@@ -497,11 +734,11 @@ export default function CheckoutPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>TRANSMITTING TO ATLAS...</span>
+                    <span>CONFIRMING YOUR ORDER...</span>
                   </>
                 ) : (
                   <>
-                    <span>TRANSMIT ORDER &bull; Rs. {total}</span>
+                    <span>CONFIRM &bull; Rs. {total}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -509,13 +746,21 @@ export default function CheckoutPage() {
 
               <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-theme-muted pt-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Direct Kitchen Telemetry &bull; Nepal ePayments</span>
+                <span>Direct Kitchen Dispatch &bull; Nepal ePayments &amp; COD</span>
               </div>
             </div>
           </div>
 
         </div>
       </div>
+
+      {/* Real Location OSM Map Picker Modal */}
+      <LocationPickerModal
+        isOpen={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
+        onSelectLocation={handleLocationPicked}
+        initialCoords={deliveryCoords}
+      />
     </div>
   );
 }

@@ -54,6 +54,8 @@ interface OrderReceipt {
   paymentMethod: string;
   deliveryPin: string;
   placedAt: string;
+  deliveryTiming?: string;
+  scheduledSlot?: string;
 }
 
 // ─── Rider ────────────────────────────────────────────────────────────────────
@@ -105,6 +107,8 @@ export default function OrderTrackingPage() {
               paymentMethod: o.payment?.method || o.paymentMethod || '',
               deliveryPin: o.deliveryPin || '----',
               placedAt: o.createdAt || new Date().toISOString(),
+              deliveryTiming: o.deliveryTiming,
+              scheduledSlot: o.scheduledSlot,
             });
           }
         }
@@ -187,7 +191,7 @@ export default function OrderTrackingPage() {
 
           <div className="text-center min-w-0 flex-1">
             <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted">
-              Order Telemetry
+              Live Order Status
             </p>
             <p
               className="text-xs sm:text-sm uppercase tracking-tight text-theme-text truncate"
@@ -212,30 +216,44 @@ export default function OrderTrackingPage() {
         {/* ── LEFT: ETA + Pipeline + Rider + GPS ───────────────────────────── */}
         <div className="space-y-8 sm:space-y-12">
 
-          {/* ETA */}
+          {/* ETA / Scheduled Arrival */}
           <div>
             <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted mb-3">
-              Estimated Arrival
+              {receipt?.scheduledSlot ? 'Scheduled Arrival Window' : 'Estimated Arrival'}
             </p>
-            <div className="flex items-end gap-3 sm:gap-4">
-              <span
-                className="text-[72px] sm:text-[96px] leading-none text-theme-text"
-                style={{ fontFamily: 'var(--font-clubstone)' }}
-              >
-                {status === 'DELIVERED' ? '00' : String(eta).padStart(2, '0')}
-              </span>
-              <div className="pb-3 sm:pb-4">
-                <p
-                  className="text-xl sm:text-2xl uppercase text-theme-muted"
+            {receipt?.scheduledSlot ? (
+              <div className="space-y-1">
+                <div
+                  className="text-3xl sm:text-5xl md:text-6xl text-[#f91814] uppercase leading-none font-bold"
                   style={{ fontFamily: 'var(--font-clubstone)' }}
                 >
-                  {status === 'DELIVERED' ? 'DELIVERED' : 'MIN'}
-                </p>
-                <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted mt-1">
-                  {receipt?.restaurant || 'Kitchen'} &bull; placed {placedTime}
+                  {receipt.scheduledSlot}
+                </div>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted pt-1">
+                  {receipt?.restaurant || 'Kitchen'} &bull; Confirmed Delivery Slot
                 </p>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-end gap-3 sm:gap-4">
+                <span
+                  className="text-[72px] sm:text-[96px] leading-none text-theme-text"
+                  style={{ fontFamily: 'var(--font-clubstone)' }}
+                >
+                  {status === 'DELIVERED' ? '00' : String(eta).padStart(2, '0')}
+                </span>
+                <div className="pb-3 sm:pb-4">
+                  <p
+                    className="text-xl sm:text-2xl uppercase text-theme-muted"
+                    style={{ fontFamily: 'var(--font-clubstone)' }}
+                  >
+                    {status === 'DELIVERED' ? 'DELIVERED' : 'MIN'}
+                  </p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-theme-muted mt-1">
+                    {receipt?.restaurant || 'Kitchen'} &bull; placed {placedTime}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Pipeline */}
@@ -377,10 +395,10 @@ export default function OrderTrackingPage() {
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2 font-mono text-[10px] text-theme-muted uppercase tracking-widest">
                 <MapPin size={10} className="text-[#f91814]" />
-                Kathmandu Valley
+                Nepal Live Dispatch
               </div>
               <div className="font-mono text-[10px] text-theme-muted uppercase tracking-widest">
-                Turf.js Spatial
+                Live GPS Routing
               </div>
             </div>
           </div>

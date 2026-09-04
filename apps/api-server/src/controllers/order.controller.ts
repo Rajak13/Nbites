@@ -16,6 +16,8 @@ const createOrderSchema = z.object({
   dropoffInstruction: z.string().optional().default('call'),
   deliveryLat: z.number().optional(),
   deliveryLng: z.number().optional(),
+  deliveryTiming: z.enum(['ASAP', 'SCHEDULED']).default('ASAP'),
+  scheduledSlot: z.string().optional(),
   items: z
     .array(
       z.object({
@@ -124,7 +126,7 @@ export class OrderController {
       }
 
       // 4. Generate unique identifiers
-      const orderNumber = `ORD-KTM-${Date.now().toString().slice(-4)}${Math.floor(
+      const orderNumber = `ORD-NP-${Date.now().toString().slice(-4)}${Math.floor(
         100 + Math.random() * 900
       )}`;
       const deliveryPin = Math.floor(1000 + Math.random() * 9000).toString();
@@ -193,6 +195,8 @@ export class OrderController {
           name: restaurant.name,
           slug: restaurant.slug,
         },
+        deliveryTiming: validated.deliveryTiming,
+        scheduledSlot: validated.scheduledSlot,
         deliveryAddress: {
           landmark: validated.deliveryLandmark,
           address: validated.deliveryAddress,
@@ -230,6 +234,8 @@ export class OrderController {
             orderNumber: newOrder.orderNumber,
             status: newOrder.status,
             restaurantName: newOrder.restaurant.name,
+            deliveryTiming: newOrder.deliveryTiming,
+            scheduledSlot: newOrder.scheduledSlot,
             totalPayable: newOrder.financialBreakdown.totalPayable,
             deliveryFee: newOrder.financialBreakdown.deliveryFee,
             deliveryPin: newOrder.deliveryPin,

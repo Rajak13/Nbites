@@ -9,7 +9,6 @@ import {
   Plus,
   Check,
   Star,
-  Clock,
   ArrowRight,
 } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
@@ -194,8 +193,8 @@ export function ChefTurntableSection() {
                 
                 {/* Floating Pill Tag (Top-Right) */}
                 <div className="absolute -top-3 sm:-top-4 right-0 sm:right-2 z-30 bg-[#FFFFFF] border-[1.5px] border-[#18120e] text-[#18120e] px-3 sm:px-4 py-1 rounded-full font-mono text-xs font-bold shadow-[2px_2px_0px_0px_#18120e] flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-[#f91814]" />
-                  <span>⏱ {activeDish.prepTime} DISPATCH</span>
+                  <span className="w-2 h-2 rounded-full bg-[#f91814]" />
+                  <span>{activeDish.category}</span>
                 </div>
 
                 {/* Pedestal / Circular High-Res Dish Base */}

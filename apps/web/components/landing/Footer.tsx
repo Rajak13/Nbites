@@ -61,11 +61,11 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/order-tracking/ORD-KTM-8942"
+                  href="/order-tracking/ORD-NP-8942"
                   className="text-base text-[#F5F5F0] hover:text-[#f91814] transition-colors duration-200 block"
                   style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
                 >
-                  Live Telemetry Tracking
+                  Live Order Tracking
                 </Link>
               </li>
               <li>

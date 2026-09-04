@@ -17,18 +17,18 @@
 :root, [data-theme="cream"] {
   --background: #f5e3cd;
   --foreground: #18120e;
-  --theme-bg: #F5F5F0;
-  --theme-surface: #EDECEA;
-  --theme-surface-alt: #E8E6E1;
-  --theme-border: #C8C6C1;
-  --theme-border-subtle: #D8D6D1;
-  --theme-text: #0B0B0B;
-  --theme-text-muted: #6B6966;
-  --theme-text-dim: #9E9B97;
-  --theme-card-hover-border: #0B0B0B;
-  --theme-shadow-color: #0B0B0B;
-  --theme-header-bg: rgba(245, 245, 240, 0.95);
-  --theme-input-bg: #F5F5F0;
+  --theme-bg: #f5e3cd;
+  --theme-surface: #ede0cd;
+  --theme-surface-alt: #e5d6c1;
+  --theme-border: #d4c2ab;
+  --theme-border-subtle: #c2b09a;
+  --theme-text: #18120e;
+  --theme-text-muted: #6b5d52;
+  --theme-text-dim: #998a7c;
+  --theme-card-hover-border: #18120e;
+  --theme-shadow-color: #18120e;
+  --theme-header-bg: rgba(245, 227, 205, 0.94);
+  --theme-input-bg: #f5e3cd;
 }
 
 [data-theme="dark"] {

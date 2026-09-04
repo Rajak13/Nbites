@@ -6,13 +6,20 @@ import { ArrowUpRight, ShoppingBag, User as UserIcon } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 import { useAuthStore } from '@/lib/auth';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
+import { useTheme } from '@/components/common/ThemeProvider';
 
 interface HeaderProps {
   theme?: 'red' | 'cream' | 'dark';
+  className?: string;
+  isHero?: boolean;
 }
 
-export function Header({ theme = 'cream' }: HeaderProps) {
-  const isLightText = theme === 'red' || theme === 'dark';
+export function Header({ theme, className = '', isHero = false }: HeaderProps) {
+  const { theme: activeContextTheme } = useTheme();
+  // If explicitly passed (e.g. hero slide changes), use that; else follow active context theme
+  const resolvedTheme = theme || activeContextTheme;
+  const isLightText = resolvedTheme === 'red' || resolvedTheme === 'dark';
+
   const setIsOpen = useCartStore((state) => state.setIsOpen);
   const itemCount = useCartStore((state) => state.getItemCount());
 
@@ -22,13 +29,17 @@ export function Header({ theme = 'cream' }: HeaderProps) {
 
   const isAuthenticated = Boolean(token && user);
 
+  const containerClass = isHero
+    ? 'absolute top-0 left-0 right-0 w-full px-4 sm:px-6 md:px-12 pt-6 sm:pt-8 pb-4 z-50 flex items-center justify-between pointer-events-auto bg-transparent border-b border-transparent transition-colors duration-300'
+    : 'sticky top-0 left-0 right-0 w-full px-4 sm:px-6 md:px-12 py-3.5 sm:py-4 z-50 flex items-center justify-between pointer-events-auto bg-theme-header backdrop-blur-md border-b border-theme-border/50 shadow-xs transition-colors duration-300';
+
   return (
-    <header className="absolute top-0 left-0 right-0 w-full px-4 sm:px-6 md:px-12 pt-6 sm:pt-8 pb-4 z-50 flex items-center justify-between pointer-events-auto transition-colors duration-500">
+    <header className={`${containerClass} ${className}`}>
       {/* Left: Brand Logo */}
       <Link href="/" className="group flex items-center gap-2 select-none shrink-0">
         <span
-          className={`text-2xl sm:text-3xl font-bold tracking-[-1.5px] transition-colors duration-500 ${
-            isLightText ? 'text-white' : 'text-[#18120e]'
+          className={`text-2xl sm:text-3xl font-bold tracking-[-1.5px] transition-colors duration-300 ${
+            isLightText ? 'text-[#F5F5F0]' : 'text-[#18120e]'
           }`}
           style={{ fontFamily: 'var(--font-clubstone), "Inter Display", sans-serif' }}
         >
@@ -38,14 +49,14 @@ export function Header({ theme = 'cream' }: HeaderProps) {
 
       {/* Center: Desktop Navigation Links */}
       <nav
-        className="hidden md:flex items-center gap-6 lg:gap-10 text-[14px] lg:text-[15px] font-bold tracking-[0.06em] transition-colors duration-500"
+        className="hidden md:flex items-center gap-6 lg:gap-10 text-[14px] lg:text-[15px] font-bold tracking-[0.06em] transition-colors duration-300"
         style={{ fontFamily: 'var(--font-nokie), sans-serif' }}
       >
         <Link
           href="/discovery"
-          className={`uppercase transition-colors duration-300 ${
+          className={`uppercase transition-colors duration-200 ${
             isLightText
-              ? 'text-white hover:text-zinc-200'
+              ? 'text-[#F5F5F0] hover:text-[#f91814]'
               : 'text-[#18120e] hover:text-[#f91814]'
           }`}
         >
@@ -53,9 +64,9 @@ export function Header({ theme = 'cream' }: HeaderProps) {
         </Link>
         <Link
           href="/kds"
-          className={`uppercase transition-colors duration-300 ${
+          className={`uppercase transition-colors duration-200 ${
             isLightText
-              ? 'text-white hover:text-zinc-200'
+              ? 'text-[#F5F5F0] hover:text-[#f91814]'
               : 'text-[#18120e] hover:text-[#f91814]'
           }`}
         >
@@ -63,9 +74,9 @@ export function Header({ theme = 'cream' }: HeaderProps) {
         </Link>
         <Link
           href="/order-tracking/ORD-KTM-8942"
-          className={`uppercase transition-colors duration-300 ${
+          className={`uppercase transition-colors duration-200 ${
             isLightText
-              ? 'text-white hover:text-zinc-200'
+              ? 'text-[#F5F5F0] hover:text-[#f91814]'
               : 'text-[#18120e] hover:text-[#f91814]'
           }`}
         >
@@ -73,9 +84,9 @@ export function Header({ theme = 'cream' }: HeaderProps) {
         </Link>
         <Link
           href="/checkout"
-          className={`uppercase transition-colors duration-300 ${
+          className={`uppercase transition-colors duration-200 ${
             isLightText
-              ? 'text-white hover:text-zinc-200'
+              ? 'text-[#F5F5F0] hover:text-[#f91814]'
               : 'text-[#18120e] hover:text-[#f91814]'
           }`}
         >
@@ -95,7 +106,7 @@ export function Header({ theme = 'cream' }: HeaderProps) {
             aria-label="User Profile"
             className={`inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 h-9 border-2 font-mono text-[11px] font-bold uppercase tracking-wider transition-all duration-150 rounded-none cursor-pointer ${
               isLightText
-                ? 'border-white text-white hover:bg-white hover:text-[#0B0B0B]'
+                ? 'border-white text-[#F5F5F0] hover:bg-white hover:text-[#0B0B0B]'
                 : 'border-[#18120e] text-[#18120e] hover:bg-[#18120e] hover:text-white'
             }`}
           >
@@ -109,7 +120,7 @@ export function Header({ theme = 'cream' }: HeaderProps) {
             onClick={() => openAuthModal()}
             className={`inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 h-9 border-2 font-mono text-[11px] font-bold uppercase tracking-wider transition-all duration-150 rounded-none cursor-pointer ${
               isLightText
-                ? 'border-white text-white hover:bg-white hover:text-[#0B0B0B]'
+                ? 'border-white text-[#F5F5F0] hover:bg-white hover:text-[#0B0B0B]'
                 : 'border-[#18120e] text-[#18120e] hover:bg-[#18120e] hover:text-white'
             }`}
           >
@@ -124,7 +135,7 @@ export function Header({ theme = 'cream' }: HeaderProps) {
           aria-label="Open cart ticket"
           className={`relative inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 border-2 transition-all duration-150 rounded-none cursor-pointer ${
             isLightText
-              ? 'border-white text-white hover:bg-white hover:text-[#0B0B0B]'
+              ? 'border-white text-[#F5F5F0] hover:bg-white hover:text-[#0B0B0B]'
               : 'border-[#18120e] text-[#18120e] hover:bg-[#18120e] hover:text-white'
           }`}
         >
@@ -154,4 +165,3 @@ export function Header({ theme = 'cream' }: HeaderProps) {
     </header>
   );
 }
-

@@ -3,8 +3,10 @@
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, Search, MapPin, Clock, Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowUpRight, Search, MapPin, Star, Flame } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-config';
+import { useAuthStore } from '@/lib/auth';
 
 interface KitchenItem {
   id: string;
@@ -72,15 +74,46 @@ const FALLBACK_KITCHENS: KitchenItem[] = [
     deliveryFee: 50,
     specialties: ['TIMUR PEPPERONI', 'SMOKED MOZZARELLA', 'TRUFFLE FRIES'],
   },
+  {
+    id: 'rest-pkr-1',
+    name: 'Phewa Lakeside Smokehouse',
+    slug: 'phewa-lakeside-smokehouse',
+    tagline: 'Fresh mountain trout grill, wild herbs & Himalayan firewood skewers.',
+    coverImage: '/hero/1.jpg',
+    address: 'Baidam, Center Point, Lakeside',
+    zone: 'Lakeside',
+    city: 'Pokhara',
+    isOpen: true,
+    rating: 4.9,
+    reviewCount: 390,
+    estimatedPrepTimeMins: 20,
+    deliveryFee: 50,
+    specialties: ['GRILLED PHEWA TROUT', 'MUSTANG CHILI POTATO', 'SMOKED DUCK'],
+  },
 ];
 
-const SECTORS = ['ALL SECTORS', 'JHAMSIKHEL', 'PATAN DURBAR', 'BALUWATAR'];
+const SECTORS = ['ALL SECTORS', 'KATHMANDU', 'LALITPUR', 'POKHARA', 'CHITWAN'];
 
 export default function DiscoveryPage() {
+  const router = useRouter();
+  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+  const openAuthModal = useAuthStore((state) => state.openAuthModal);
+
   const [kitchens, setKitchens] = React.useState<KitchenItem[]>(FALLBACK_KITCHENS);
   const [selectedSector, setSelectedSector] = React.useState('ALL SECTORS');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
+
+  const handleEnterKitchen = (slug: string) => {
+    if (!token || !user) {
+      openAuthModal(() => {
+        router.push(`/restaurant/${slug}`);
+      });
+      return;
+    }
+    router.push(`/restaurant/${slug}`);
+  };
 
   React.useEffect(() => {
     async function loadKitchens() {
@@ -126,11 +159,13 @@ export default function DiscoveryPage() {
   const filteredKitchens = kitchens.filter((k) => {
     const matchesSector =
       selectedSector === 'ALL SECTORS' ||
-      k.zone.toUpperCase().includes(selectedSector.toUpperCase());
+      k.zone.toUpperCase().includes(selectedSector.toUpperCase()) ||
+      k.city.toUpperCase().includes(selectedSector.toUpperCase());
     const matchesSearch =
       k.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       k.tagline.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      k.zone.toLowerCase().includes(searchQuery.toLowerCase());
+      k.zone.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      k.city.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSector && matchesSearch;
   });
 
@@ -143,7 +178,7 @@ export default function DiscoveryPage() {
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 bg-[#f91814]" />
             <span className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.2em] text-[#f91814] font-bold">
-              KATHMANDU VALLEY // ACTIVE SECTORS
+              NEPAL NATIONWIDE // ACTIVE KITCHEN HUBS
             </span>
           </div>
 
@@ -230,9 +265,9 @@ export default function DiscoveryPage() {
                         <MapPin className="w-3.5 h-3.5 text-[#f91814] shrink-0" />
                         {kitchen.zone}, {kitchen.city}
                       </span>
-                      <span className="flex items-center gap-1 shrink-0">
-                        <Clock className="w-3.5 h-3.5 text-[#f91814]" />
-                        {kitchen.estimatedPrepTimeMins} MINS
+                      <span className="flex items-center gap-1 shrink-0 text-[#f91814] font-bold text-[11px]">
+                        <Flame className="w-3.5 h-3.5 text-[#f91814]" />
+                        LIVE KITCHEN
                       </span>
                     </div>
 
@@ -273,12 +308,13 @@ export default function DiscoveryPage() {
                   <span className="text-theme-muted font-normal">({kitchen.reviewCount} Reviews)</span>
                 </div>
 
-                <Link href={`/restaurant/${kitchen.slug}`} className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#f91814] text-white border-2 border-[#f91814] px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider hover:bg-black hover:border-black hover:shadow-[3px_3px_0px_0px_#f91814] transition-all cursor-pointer">
-                    <span>ENTER KITCHEN</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                  </button>
-                </Link>
+                <button
+                  onClick={() => handleEnterKitchen(kitchen.slug)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#f91814] text-white border-2 border-[#f91814] px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider hover:bg-black hover:border-black hover:shadow-[3px_3px_0px_0px_#f91814] transition-all cursor-pointer"
+                >
+                  <span>ENTER KITCHEN</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </article>
           ))}
