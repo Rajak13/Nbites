@@ -1,5 +1,6 @@
 import { connectDatabase, disconnectDatabase } from '../config/db';
-import { Restaurant, Driver } from '../models';
+import { Restaurant, Driver, User } from '../models';
+import { hashPassword } from '../utils/password.util';
 
 async function seed() {
   console.log('🌱 [Seed] Starting Kathmandu Valley database seeding...');
@@ -418,6 +419,29 @@ async function seed() {
 
     const createdKitchens = await Restaurant.insertMany(kitchens);
     console.log(`✅ [Seed] Inserted ${createdKitchens.length} partner kitchens`);
+
+    // 2.1 Seed partner kitchen merchant accounts
+    const merchantPassword = hashPassword('nbites2026');
+    for (const k of createdKitchens) {
+      const emailPrefix = k.slug.replace(/-hub|-guild/g, '').replace(/-/g, '.');
+      const merchantEmail = `${emailPrefix}@nbites.com`;
+      await User.findOneAndUpdate(
+        { email: merchantEmail },
+        {
+          email: merchantEmail,
+          password: merchantPassword,
+          name: `${k.name} Head Chef`,
+          phone: k.phone.replace(/\s+/g, '').replace('+977', '') || '9800000000',
+          role: 'MERCHANT',
+          city: k.city,
+          restaurantId: k._id.toString(),
+          termsAccepted: true,
+          termsAcceptedAt: new Date(),
+        },
+        { upsert: true, new: true }
+      );
+      console.log(`👨‍🍳 [Seed] Created Merchant Account: ${merchantEmail} (PW: nbites2026) -> ${k.name}`);
+    }
 
     // 3. Insert 1 mock active express driver
     const driver = await Driver.create({

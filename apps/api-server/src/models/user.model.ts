@@ -4,6 +4,8 @@ export type UserRole = 'CUSTOMER' | 'MERCHANT' | 'DRIVER' | 'ADMIN';
 export type ThemePreference = 'cream' | 'dark';
 
 export interface IUser extends Document {
+  email?: string;
+  password?: string;
   phone: string;
   name?: string;
   role: UserRole;
@@ -25,7 +27,9 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
-    phone: { type: String, required: true, unique: true, index: true },
+    email: { type: String, lowercase: true, trim: true, sparse: true, index: true },
+    password: { type: String },
+    phone: { type: String, required: true, index: true },
     name: { type: String },
     role: {
       type: String,

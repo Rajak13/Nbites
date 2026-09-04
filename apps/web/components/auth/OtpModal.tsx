@@ -2,10 +2,9 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { X, ShieldCheck, ArrowRight, Loader2, RefreshCw, MapPin } from 'lucide-react';
+import { X, ShieldCheck, ArrowRight, Loader2, MapPin, Lock, Mail, Phone, User, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth';
 import { getApiBaseUrl } from '@/lib/api-config';
-import { isFirebaseConfigured, getFirebaseAuth, createRecaptchaVerifier } from '@/lib/firebase';
 
 const CITIES = [
   { value: 'Dharan', label: 'Dharan (Eastern Hub)' },
@@ -24,19 +23,17 @@ export function OtpModal() {
   const selectedCity = useAuthStore((state) => state.selectedCity);
   const setSelectedCity = useAuthStore((state) => state.setSelectedCity);
 
-  const [step, setStep] = React.useState<'phone' | 'otp'>('phone');
+  const [mode, setMode] = React.useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [phone, setPhone] = React.useState('');
   const [name, setName] = React.useState('');
   const [city, setCity] = React.useState(selectedCity || 'Dharan');
   const [acceptTerms, setAcceptTerms] = React.useState(true);
-  const [digits, setDigits] = React.useState<string[]>(['', '', '', '', '', '']);
+
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [cooldown, setCooldown] = React.useState(0);
-
-  const digitRefs = React.useRef<(HTMLInputElement | null)[]>([]);
-  const confirmationResultRef = React.useRef<any>(null);
-  const recaptchaVerifierRef = React.useRef<any>(null);
+  const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
 
   // Keep city in sync with store
   React.useEffect(() => {
@@ -47,23 +44,13 @@ export function OtpModal() {
   React.useEffect(() => {
     if (isOpen) {
       setError(null);
-      if (step === 'otp') {
-        setTimeout(() => digitRefs.current[0]?.focus(), 100);
-      }
+      setSuccessMsg(null);
     } else {
-      setStep('phone');
-      setDigits(['', '', '', '', '', '']);
       setError(null);
-      confirmationResultRef.current = null;
+      setSuccessMsg(null);
+      setPassword('');
     }
-  }, [isOpen, step]);
-
-  // Cooldown timer
-  React.useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = setInterval(() => setCooldown((c) => c - 1), 1000);
-    return () => clearInterval(t);
-  }, [cooldown]);
+  }, [isOpen, mode]);
 
   if (!isOpen) return null;
 
@@ -72,12 +59,66 @@ export function OtpModal() {
     return /^9[78]\d{8}$/.test(clean);
   };
 
-  const handleRequestOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const clean = phone.replace(/\D/g, '');
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) {
+      setError('Please enter both your email address and password.');
+      return;
+    }
 
-    if (!validatePhone(clean)) {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const apiUrl = getApiBaseUrl();
+      const res = await fetch(`${apiUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success && data.data?.token) {
+        if (data.data.user.city) {
+          setSelectedCity(data.data.user.city);
+        }
+        login(data.data.token, data.data.user);
+        closeModal();
+      } else {
+        setError(data.message || 'Invalid email or password. Please check and try again.');
+      }
+    } catch {
+      setError('Network connection error. Check your internet connection.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanPhone = phone.replace(/\D/g, '');
+
+    if (!name.trim()) {
+      setError('Please enter your full name.');
+      return;
+    }
+
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!validatePhone(cleanPhone)) {
       setError('Please enter a valid 10-digit Nepal mobile number (98XXXXXXXX or 97XXXXXXXX).');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
       return;
     }
 
@@ -89,178 +130,16 @@ export function OtpModal() {
     setIsLoading(true);
     setError(null);
 
-    // 1. Primary path: Firebase Phone Auth (Delivers real SMS to any Nepal number)
-    if (isFirebaseConfigured()) {
-      try {
-        const { signInWithPhoneNumber } = await import('firebase/auth');
-        const auth = getFirebaseAuth();
-
-        if (auth) {
-          if (!recaptchaVerifierRef.current) {
-            recaptchaVerifierRef.current = createRecaptchaVerifier(
-              'recaptcha-container',
-              auth,
-              () => {
-                setError('SMS verification challenge expired. Please retry.');
-              }
-            );
-          }
-
-          const nepaliNumber = `+977${clean}`;
-          const confirmation = await signInWithPhoneNumber(
-            auth,
-            nepaliNumber,
-            recaptchaVerifierRef.current
-          );
-
-          confirmationResultRef.current = confirmation;
-          setStep('otp');
-          setCooldown(60);
-          setIsLoading(false);
-          return;
-        }
-      } catch (fbErr: any) {
-        console.warn('[Firebase Auth] Phone error:', fbErr);
-        if (fbErr?.code === 'auth/invalid-phone-number') {
-          setError('Invalid Nepal mobile number format.');
-          setIsLoading(false);
-          return;
-        }
-        if (fbErr?.code === 'auth/too-many-requests') {
-          setError('Too many requests sent. Please wait a minute before requesting another code.');
-          setIsLoading(false);
-          return;
-        }
-        if (fbErr?.code === 'auth/captcha-check-failed') {
-          setError('Security verification check failed. Please refresh and try again.');
-          setIsLoading(false);
-          return;
-        }
-        // If Firebase is disabled or fails, proceed to fallback local endpoint below
-      }
-    }
-
-    // 2. Fallback path: Internal API server endpoint
     try {
       const apiUrl = getApiBaseUrl();
-      const res = await fetch(`${apiUrl}/auth/request-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: clean }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        setStep('otp');
-        setCooldown(60);
-      } else {
-        setError(data.message || 'Failed to send verification code. Please try again.');
-      }
-    } catch {
-      setError('Network connection error. Check your connection.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDigitChange = (idx: number, val: string) => {
-    const char = val.slice(-1).replace(/\D/g, '');
-    const newDigits = [...digits];
-    newDigits[idx] = char;
-    setDigits(newDigits);
-
-    if (char && idx < 5) {
-      digitRefs.current[idx + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (idx: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !digits[idx] && idx > 0) {
-      digitRefs.current[idx - 1]?.focus();
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (!pasted) return;
-    const newDigits = [...digits];
-    for (let i = 0; i < 6; i++) {
-      newDigits[i] = pasted[i] || '';
-    }
-    setDigits(newDigits);
-    const nextIdx = Math.min(pasted.length, 5);
-    digitRefs.current[nextIdx]?.focus();
-  };
-
-  const handleVerifyOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const code = digits.join('');
-    if (code.length !== 6) {
-      setError('Please enter all 6 digits of the verification code.');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    const apiUrl = getApiBaseUrl();
-    const cleanPhone = phone.replace(/\D/g, '');
-
-    // 1. If Firebase confirmationResult is active, verify code with Firebase
-    if (confirmationResultRef.current) {
-      try {
-        const userCredential = await confirmationResultRef.current.confirm(code);
-        const idToken = await userCredential.user.getIdToken();
-
-        // Sync authenticated user with nBites backend
-        const res = await fetch(`${apiUrl}/auth/firebase-login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone: cleanPhone,
-            idToken,
-            name: name.trim() || undefined,
-            city: city.trim() || 'Dharan',
-            termsAccepted: true,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (res.ok && data.success && data.data?.token) {
-          setSelectedCity(city.trim() || 'Dharan');
-          login(data.data.token, data.data.user);
-          closeModal();
-          return;
-        } else {
-          setError(data.message || 'Authentication synchronization failed.');
-        }
-      } catch (fbErr: any) {
-        console.error('[Firebase Verify Error]:', fbErr);
-        if (fbErr?.code === 'auth/invalid-verification-code') {
-          setError('Incorrect verification code. Please check and try again.');
-        } else if (fbErr?.code === 'auth/code-expired') {
-          setError('Verification code has expired. Please request a new one.');
-        } else {
-          setError(fbErr?.message || 'Verification failed. Please try again.');
-        }
-      } finally {
-        setIsLoading(false);
-      }
-      return;
-    }
-
-    // 2. Fallback: Internal backend OTP verification
-    try {
-      const res = await fetch(`${apiUrl}/auth/verify-otp`, {
+      const res = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
           phone: cleanPhone,
-          otp: code,
-          name: name.trim() || undefined,
           city: city.trim() || 'Dharan',
           termsAccepted: true,
         }),
@@ -273,10 +152,10 @@ export function OtpModal() {
         login(data.data.token, data.data.user);
         closeModal();
       } else {
-        setError(data.message || 'Invalid or expired verification code.');
+        setError(data.message || 'Registration failed. An account with this email may already exist.');
       }
     } catch {
-      setError('Network connection error during verification.');
+      setError('Network connection error. Check your internet connection.');
     } finally {
       setIsLoading(false);
     }
@@ -285,9 +164,6 @@ export function OtpModal() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs select-none">
       <div className="relative w-full max-w-md border-2 border-[#0B0B0B] dark:border-[#27272A] bg-[#F5F5F0] dark:bg-[#141414] p-6 sm:p-8 shadow-[6px_6px_0px_0px_#f91814]">
-        {/* Invisible reCAPTCHA container for Firebase Phone Auth */}
-        <div id="recaptcha-container" />
-
         {/* Close Button */}
         <button
           onClick={closeModal}
@@ -298,7 +174,7 @@ export function OtpModal() {
         </button>
 
         {/* Modal Header */}
-        <div className="space-y-1.5 border-b-2 border-[#C8C6C1] dark:border-[#27272A] pb-4 mb-6">
+        <div className="space-y-1.5 border-b-2 border-[#C8C6C1] dark:border-[#27272A] pb-4 mb-5">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-[#f91814]" />
             <span className="font-mono text-[10px] text-[#f91814] uppercase tracking-[0.2em] font-bold">
@@ -309,31 +185,185 @@ export function OtpModal() {
             className="text-2xl sm:text-3xl text-[#0B0B0B] dark:text-[#F5F5F0] tracking-tight uppercase leading-tight"
             style={{ fontFamily: 'var(--font-clubstone), serif' }}
           >
-            {step === 'phone' ? 'SIGN IN OR REGISTER.' : 'ENTER 6-DIGIT CODE.'}
+            {mode === 'signin' ? 'WELCOME BACK.' : 'CREATE ACCOUNT.'}
           </h2>
           <p className="font-mono text-xs text-[#6B6966] dark:text-[#A1A1AA]">
-            {step === 'phone'
-              ? 'Enter your mobile number and operational city to unlock your local kitchens.'
-              : `Verification code sent to +977 ${phone}. Valid for 5 minutes.`}
+            {mode === 'signin'
+              ? 'Sign in to access your orders, partner kitchen tickets, and delivery telemetry.'
+              : 'Join nBites with verified contact coordinates for instant line ordering.'}
           </p>
         </div>
 
-        {/* Error notice */}
+        {/* Mode Switcher Tabs */}
+        <div className="grid grid-cols-2 gap-2 mb-5 font-mono text-xs font-bold uppercase tracking-wider">
+          <button
+            type="button"
+            onClick={() => setMode('signin')}
+            className={`py-2 px-3 border-2 transition-all cursor-pointer text-center ${
+              mode === 'signin'
+                ? 'border-[#0B0B0B] dark:border-white bg-[#0B0B0B] dark:bg-white text-white dark:text-[#0B0B0B] shadow-[2px_2px_0px_0px_#f91814]'
+                : 'border-[#C8C6C1] dark:border-[#27272A] bg-transparent text-[#6B6966] dark:text-[#A1A1AA] hover:border-[#0B0B0B]'
+            }`}
+          >
+            SIGN IN
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('signup')}
+            className={`py-2 px-3 border-2 transition-all cursor-pointer text-center ${
+              mode === 'signup'
+                ? 'border-[#0B0B0B] dark:border-white bg-[#0B0B0B] dark:bg-white text-white dark:text-[#0B0B0B] shadow-[2px_2px_0px_0px_#f91814]'
+                : 'border-[#C8C6C1] dark:border-[#27272A] bg-transparent text-[#6B6966] dark:text-[#A1A1AA] hover:border-[#0B0B0B]'
+            }`}
+          >
+            NEW ACCOUNT
+          </button>
+        </div>
+
+        {/* Error Notice */}
         {error && (
           <div className="mb-4 p-3 border-2 border-[#f91814] bg-[#f91814]/10 font-mono text-xs text-[#f91814]">
             {error}
           </div>
         )}
 
-        {/* STEP 1: Phone Input & City Form */}
-        {step === 'phone' && (
-          <form onSubmit={handleRequestOtp} className="space-y-4">
+        {/* Success Notice */}
+        {successMsg && (
+          <div className="mb-4 p-3 border-2 border-emerald-500 bg-emerald-500/10 font-mono text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* FORM 1: SIGN IN */}
+        {mode === 'signin' && (
+          <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-1.5 font-mono text-xs">
               <label className="text-[#6B6966] dark:text-[#A1A1AA] uppercase tracking-wider block">
-                Nepal Mobile Number <span className="text-[#f91814]">*</span>
+                Email Address <span className="text-[#f91814]">*</span>
               </label>
+              <div className="flex items-center border-2 border-[#C8C6C1] dark:border-[#27272A] bg-[#EDECEA] dark:bg-[#0B0B0B] focus-within:border-[#f91814] transition-colors">
+                <span className="px-3 text-[#6B6966] dark:text-[#A1A1AA]">
+                  <Mail className="w-4 h-4" />
+                </span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your.email@example.com"
+                  autoFocus
+                  required
+                  className="flex-1 bg-transparent py-2.5 pr-3 text-[#0B0B0B] dark:text-[#F5F5F0] focus:outline-none text-sm font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <label className="text-[#6B6966] dark:text-[#A1A1AA] uppercase tracking-wider block">
+                  Password <span className="text-[#f91814]">*</span>
+                </label>
+              </div>
+              <div className="flex items-center border-2 border-[#C8C6C1] dark:border-[#27272A] bg-[#EDECEA] dark:bg-[#0B0B0B] focus-within:border-[#f91814] transition-colors">
+                <span className="px-3 text-[#6B6966] dark:text-[#A1A1AA]">
+                  <Lock className="w-4 h-4" />
+                </span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="flex-1 bg-transparent py-2.5 pr-3 text-[#0B0B0B] dark:text-[#F5F5F0] focus:outline-none text-sm font-mono"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full mt-2 flex items-center justify-center gap-2 bg-[#f91814] text-[#F5F5F0] border-2 border-[#f91814] py-3 px-5 font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#0B0B0B] hover:border-[#0B0B0B] hover:shadow-[3px_3px_0px_0px_#f91814] transition-all cursor-pointer disabled:opacity-50"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>AUTHENTICATING...</span>
+                </>
+              ) : (
+                <>
+                  <span>SIGN IN TO NBITES</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+
+            <div className="pt-3 border-t border-[#C8C6C1] dark:border-[#27272A] text-center font-mono text-xs text-[#6B6966] dark:text-[#A1A1AA]">
+              Don&apos;t have an account yet?{' '}
+              <button
+                type="button"
+                onClick={() => setMode('signup')}
+                className="text-[#f91814] font-bold underline cursor-pointer hover:text-[#0B0B0B] dark:hover:text-white"
+              >
+                Create one now
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* FORM 2: CREATE ACCOUNT */}
+        {mode === 'signup' && (
+          <form onSubmit={handleSignUp} className="space-y-3.5 max-h-[75vh] overflow-y-auto pr-1">
+            <div className="space-y-1 font-mono text-xs">
+              <label className="text-[#6B6966] dark:text-[#A1A1AA] uppercase tracking-wider block">
+                Full Name <span className="text-[#f91814]">*</span>
+              </label>
+              <div className="flex items-center border-2 border-[#C8C6C1] dark:border-[#27272A] bg-[#EDECEA] dark:bg-[#0B0B0B] focus-within:border-[#f91814] transition-colors">
+                <span className="px-3 text-[#6B6966] dark:text-[#A1A1AA]">
+                  <User className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Aashish Shrestha"
+                  autoFocus
+                  required
+                  className="flex-1 bg-transparent py-2 pr-3 text-[#0B0B0B] dark:text-[#F5F5F0] focus:outline-none text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1 font-mono text-xs">
+              <label className="text-[#6B6966] dark:text-[#A1A1AA] uppercase tracking-wider block">
+                Email Address <span className="text-[#f91814]">*</span>
+              </label>
+              <div className="flex items-center border-2 border-[#C8C6C1] dark:border-[#27272A] bg-[#EDECEA] dark:bg-[#0B0B0B] focus-within:border-[#f91814] transition-colors">
+                <span className="px-3 text-[#6B6966] dark:text-[#A1A1AA]">
+                  <Mail className="w-4 h-4" />
+                </span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your.email@example.com"
+                  required
+                  className="flex-1 bg-transparent py-2 pr-3 text-[#0B0B0B] dark:text-[#F5F5F0] focus:outline-none text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Nepal Mobile Number (Mandatory for restaurant & rider contact) */}
+            <div className="space-y-1 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <label className="text-[#6B6966] dark:text-[#A1A1AA] uppercase tracking-wider block">
+                  Nepal Mobile Number <span className="text-[#f91814]">*</span>
+                </label>
+                <span className="text-[10px] text-[#f91814] uppercase tracking-wider">
+                  Contact Line
+                </span>
+              </div>
               <div className="flex border-2 border-[#C8C6C1] dark:border-[#27272A] bg-[#EDECEA] dark:bg-[#0B0B0B] focus-within:border-[#f91814] transition-colors">
-                <span className="px-3.5 py-2.5 bg-[#E8E6E1] dark:bg-[#18120e] text-[#6B6966] dark:text-[#A1A1AA] border-r border-[#C8C6C1] dark:border-[#27272A] font-bold">
+                <span className="px-2.5 py-2 bg-[#E8E6E1] dark:bg-[#18120e] text-[#6B6966] dark:text-[#A1A1AA] border-r border-[#C8C6C1] dark:border-[#27272A] font-bold text-xs">
                   +977
                 </span>
                 <input
@@ -342,37 +372,28 @@ export function OtpModal() {
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="98XXXXXXXX"
                   maxLength={10}
-                  autoFocus
                   required
-                  className="flex-1 bg-transparent px-3 py-2.5 text-[#0B0B0B] dark:text-[#F5F5F0] focus:outline-none text-sm tracking-wider font-mono"
+                  className="flex-1 bg-transparent px-3 py-2 text-[#0B0B0B] dark:text-[#F5F5F0] focus:outline-none text-xs font-mono tracking-wider"
                 />
               </div>
-            </div>
-
-            <div className="space-y-1.5 font-mono text-xs">
-              <label className="text-[#6B6966] dark:text-[#A1A1AA] uppercase tracking-wider block">
-                Full Name (Optional)
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Aayush Shrestha"
-                className="w-full border-2 border-[#C8C6C1] dark:border-[#27272A] bg-[#EDECEA] dark:bg-[#0B0B0B] px-3 py-2.5 text-[#0B0B0B] dark:text-[#F5F5F0] focus:outline-none text-xs font-mono focus:border-[#f91814] transition-colors"
-              />
+              <p className="text-[10px] text-[#8C8A85] dark:text-[#71717A] leading-tight">
+                Used by kitchen chefs and delivery riders to confirm orders and dispatch.
+              </p>
             </div>
 
             {/* City Selector */}
-            <div className="space-y-1.5 font-mono text-xs">
-              <label className="text-[#6B6966] dark:text-[#A1A1AA] uppercase tracking-wider block flex items-center justify-between">
-                <span>Your Active City <span className="text-[#f91814]">*</span></span>
-                <span className="text-[10px] text-[#f91814] lowercase font-normal">(filters kitchens near you)</span>
+            <div className="space-y-1 font-mono text-xs">
+              <label className="text-[#6B6966] dark:text-[#A1A1AA] uppercase tracking-wider block">
+                Primary Delivery City <span className="text-[#f91814]">*</span>
               </label>
               <div className="relative border-2 border-[#C8C6C1] dark:border-[#27272A] bg-[#EDECEA] dark:bg-[#0B0B0B] focus-within:border-[#f91814] transition-colors">
+                <div className="absolute left-3 top-2.5 pointer-events-none text-[#f91814]">
+                  <MapPin className="w-3.5 h-3.5" />
+                </div>
                 <select
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="w-full bg-transparent px-3 py-2.5 text-[#0B0B0B] dark:text-[#F5F5F0] focus:outline-none text-xs font-mono cursor-pointer uppercase font-bold"
+                  className="w-full bg-transparent pl-8 pr-3 py-2 text-[#0B0B0B] dark:text-[#F5F5F0] focus:outline-none text-xs font-mono cursor-pointer appearance-none"
                 >
                   {CITIES.map((c) => (
                     <option key={c.value} value={c.value} className="bg-[#F5F5F0] dark:bg-[#141414] text-[#0B0B0B] dark:text-[#F5F5F0]">
@@ -380,24 +401,49 @@ export function OtpModal() {
                     </option>
                   ))}
                 </select>
+                <div className="absolute right-3 top-2.5 pointer-events-none text-[#6B6966] dark:text-[#A1A1AA] text-xs">
+                  ▾
+                </div>
               </div>
             </div>
 
-            {/* Terms & Conditions Checkbox */}
-            <div className="pt-2 pb-1">
-              <label className="flex items-start gap-2.5 cursor-pointer">
+            {/* Password */}
+            <div className="space-y-1 font-mono text-xs">
+              <label className="text-[#6B6966] dark:text-[#A1A1AA] uppercase tracking-wider block">
+                Create Password <span className="text-[#f91814]">*</span>
+              </label>
+              <div className="flex items-center border-2 border-[#C8C6C1] dark:border-[#27272A] bg-[#EDECEA] dark:bg-[#0B0B0B] focus-within:border-[#f91814] transition-colors">
+                <span className="px-3 text-[#6B6966] dark:text-[#A1A1AA]">
+                  <Lock className="w-4 h-4" />
+                </span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  required
+                  minLength={6}
+                  className="flex-1 bg-transparent py-2 pr-3 text-[#0B0B0B] dark:text-[#F5F5F0] focus:outline-none text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Mandatory Terms & Conditions Checkbox */}
+            <div className="pt-1">
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={acceptTerms}
                   onChange={(e) => setAcceptTerms(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded-none accent-[#f91814] cursor-pointer"
+                  required
+                  className="mt-0.5 accent-[#f91814] w-4 h-4 cursor-pointer rounded-none"
                 />
-                <span className="font-mono text-[11px] text-[#6B6966] dark:text-[#A1A1AA] leading-relaxed select-none">
-                  I accept all{' '}
+                <span className="font-mono text-[11px] text-[#6B6966] dark:text-[#A1A1AA] leading-tight">
+                  I accept the{' '}
                   <Link
                     href="/terms"
                     target="_blank"
-                    className="text-[#0B0B0B] dark:text-[#F5F5F0] underline font-bold hover:text-[#f91814]"
+                    className="text-[#f91814] underline hover:text-[#0B0B0B] dark:hover:text-[#F5F5F0]"
                   >
                     Terms &amp; Conditions
                   </Link>
@@ -405,101 +451,41 @@ export function OtpModal() {
                   <Link
                     href="/privacy"
                     target="_blank"
-                    className="text-[#0B0B0B] dark:text-[#F5F5F0] underline font-bold hover:text-[#f91814]"
+                    className="text-[#f91814] underline hover:text-[#0B0B0B] dark:hover:text-[#F5F5F0]"
                   >
                     Privacy Policy
                   </Link>
-                  , and{' '}
-                  <Link
-                    href="/refunds"
-                    target="_blank"
-                    className="text-[#0B0B0B] dark:text-[#F5F5F0] underline font-bold hover:text-[#f91814]"
-                  >
-                    Refund Policies
-                  </Link>
-                  .
+                  , and DoorDash-style city delivery boundaries.
                 </span>
               </label>
             </div>
 
             <button
               type="submit"
-              disabled={isLoading || !phone || !acceptTerms}
-              className="w-full mt-2 flex items-center justify-center gap-2 bg-[#f91814] text-[#F5F5F0] border-2 border-[#f91814] py-3.5 px-5 font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#0B0B0B] hover:border-[#0B0B0B] hover:shadow-[3px_3px_0px_0px_#f91814] transition-all cursor-pointer disabled:opacity-40"
+              disabled={isLoading}
+              className="w-full mt-2 flex items-center justify-center gap-2 bg-[#f91814] text-[#F5F5F0] border-2 border-[#f91814] py-3 px-5 font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#0B0B0B] hover:border-[#0B0B0B] hover:shadow-[3px_3px_0px_0px_#f91814] transition-all cursor-pointer disabled:opacity-50"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>SENDING CODE...</span>
+                  <span>CREATING ACCOUNT...</span>
                 </>
               ) : (
                 <>
-                  <span>SEND VERIFICATION CODE</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
-        )}
-
-        {/* STEP 2: 6-Digit OTP Form */}
-        {step === 'otp' && (
-          <form onSubmit={handleVerifyOtp} className="space-y-5">
-            {/* 6 Digit Inputs */}
-            <div className="flex justify-between gap-2" onPaste={handlePaste}>
-              {digits.map((digit, idx) => (
-                <input
-                  key={idx}
-                  ref={(el) => {
-                    digitRefs.current[idx] = el;
-                  }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleDigitChange(idx, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(idx, e)}
-                  className="w-11 sm:w-12 h-14 text-center text-xl font-mono font-black border-2 border-[#C8C6C1] dark:border-[#27272A] bg-[#EDECEA] dark:bg-[#0B0B0B] text-[#0B0B0B] dark:text-[#F5F5F0] focus:border-[#f91814] focus:outline-none transition-colors"
-                />
-              ))}
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading || digits.join('').length !== 6}
-              className="w-full flex items-center justify-center gap-2 bg-[#f91814] text-[#F5F5F0] border-2 border-[#f91814] py-3.5 px-5 font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#0B0B0B] hover:border-[#0B0B0B] hover:shadow-[3px_3px_0px_0px_#f91814] transition-all cursor-pointer disabled:opacity-40"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>VERIFYING CODE...</span>
-                </>
-              ) : (
-                <>
-                  <span>VERIFY &amp; SIGN IN</span>
+                  <span>CREATE NBITES ACCOUNT</span>
                   <ShieldCheck className="w-4 h-4" />
                 </>
               )}
             </button>
 
-            {/* Resend / Change number */}
-            <div className="flex items-center justify-between pt-2 border-t border-[#C8C6C1] dark:border-[#27272A] font-mono text-[11px] text-[#6B6966] dark:text-[#A1A1AA]">
+            <div className="pt-2 text-center font-mono text-xs text-[#6B6966] dark:text-[#A1A1AA]">
+              Already registered?{' '}
               <button
                 type="button"
-                onClick={() => setStep('phone')}
-                className="hover:text-[#0B0B0B] dark:hover:text-[#F5F5F0] underline cursor-pointer"
+                onClick={() => setMode('signin')}
+                className="text-[#f91814] font-bold underline cursor-pointer hover:text-[#0B0B0B] dark:hover:text-white"
               >
-                Change Phone
-              </button>
-
-              <button
-                type="button"
-                disabled={cooldown > 0 || isLoading}
-                onClick={() => handleRequestOtp()}
-                className="flex items-center gap-1 hover:text-[#0B0B0B] dark:hover:text-[#F5F5F0] disabled:opacity-50 cursor-pointer"
-              >
-                <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
-                {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
+                Sign in here
               </button>
             </div>
           </form>

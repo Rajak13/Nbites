@@ -170,6 +170,18 @@ export function Header({ theme, className = '', isHero = false }: HeaderProps) {
         {/* Compact Theme Dropdown */}
         <ThemeToggle />
 
+        {/* Merchant KDS Quick Access */}
+        {isAuthenticated && user?.role === 'MERCHANT' && (
+          <Link
+            href="/kds"
+            aria-label="Kitchen Terminal"
+            className="hidden md:inline-flex items-center gap-1.5 px-2.5 h-9 bg-[#f91814] text-white border-2 border-[#f91814] font-mono text-[11px] font-bold uppercase tracking-wider hover:bg-[#0B0B0B] hover:border-[#0B0B0B] transition-all rounded-none"
+          >
+            <span>KITCHEN</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          </Link>
+        )}
+
         {/* User Profile / Sign In */}
         {isAuthenticated ? (
           <Link

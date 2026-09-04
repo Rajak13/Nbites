@@ -12,9 +12,11 @@ export interface SavedAddress {
 
 export interface UserProfile {
   id: string;
+  email?: string;
   phone: string;
   name: string;
   role: 'CUSTOMER' | 'MERCHANT' | 'DRIVER' | 'ADMIN';
+  restaurantId?: string;
   themePreference: 'cream' | 'dark';
   city?: string;
   termsAccepted?: boolean;

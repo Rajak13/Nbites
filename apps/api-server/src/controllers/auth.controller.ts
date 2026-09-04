@@ -6,6 +6,7 @@ import { generateOtp, verifyOtp } from '../services/otp.service';
 import { smsService } from '../services/sms.service';
 import { config } from '../config/env';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { hashPassword, verifyPassword } from '../utils/password.util';
 
 function sanitizeNepalPhone(phone: string): string {
   const clean = phone.replace(/\D/g, '');
@@ -23,6 +24,197 @@ function isValidNepalPhone(phone: string): boolean {
 }
 
 export class AuthController {
+  /**
+   * POST /api/v1/auth/register
+   * Email-based signup requiring a valid Nepal contact mobile number
+   */
+  async register(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, password, phone: rawPhone, name, city, termsAccepted } = req.body;
+
+      if (!email || !password || !rawPhone) {
+        res.status(400).json({
+          success: false,
+          message: 'Email, password, and mobile number are required.',
+        });
+        return;
+      }
+
+      const cleanEmail = String(email).trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        res.status(400).json({
+          success: false,
+          message: 'Please enter a valid email address.',
+        });
+        return;
+      }
+
+      if (String(password).length < 6) {
+        res.status(400).json({
+          success: false,
+          message: 'Password must be at least 6 characters.',
+        });
+        return;
+      }
+
+      const phone = sanitizeNepalPhone(String(rawPhone));
+      if (!isValidNepalPhone(phone)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid Nepal phone format. Must be a 10-digit number starting with 98 or 97.',
+        });
+        return;
+      }
+
+      // Check if user already exists with this email
+      const existingUser = await User.findOne({ email: cleanEmail });
+      if (existingUser) {
+        res.status(400).json({
+          success: false,
+          message: 'An account with this email already exists. Please sign in.',
+        });
+        return;
+      }
+
+      const hashedPassword = hashPassword(String(password));
+      const now = new Date();
+
+      const user = await User.create({
+        email: cleanEmail,
+        password: hashedPassword,
+        phone,
+        name: name?.trim() || 'nBites Explorer',
+        role: 'CUSTOMER',
+        themePreference: 'cream',
+        city: city?.trim() || 'Dharan',
+        termsAccepted: termsAccepted !== undefined ? Boolean(termsAccepted) : true,
+        termsAcceptedAt: now,
+        lastLoginAt: now,
+        savedAddresses: [],
+      });
+
+      const token = jwt.sign(
+        {
+          id: user._id.toString(),
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          restaurantId: user.restaurantId,
+        },
+        config.jwt.secret,
+        { expiresIn: config.jwt.expiresIn } as jwt.SignOptions
+      );
+
+      res.status(201).json({
+        success: true,
+        message: 'Account created successfully.',
+        data: {
+          token,
+          user: {
+            id: user._id.toString(),
+            email: user.email,
+            phone: user.phone,
+            name: user.name,
+            role: user.role,
+            city: user.city || 'Dharan',
+            restaurantId: user.restaurantId,
+            termsAccepted: user.termsAccepted ?? true,
+            themePreference: user.themePreference || 'cream',
+            savedAddresses: user.savedAddresses || [],
+            createdAt: user.createdAt,
+          },
+        },
+      });
+    } catch (error: any) {
+      console.error('[AuthController.register] Error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Server error registering account.',
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/auth/login
+   * Email + Password authentication for Customers and Merchants/Staff
+   */
+  async login(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        res.status(400).json({
+          success: false,
+          message: 'Email and password are required.',
+        });
+        return;
+      }
+
+      const cleanEmail = String(email).trim().toLowerCase();
+      const user = await User.findOne({ email: cleanEmail });
+
+      if (!user || !user.password) {
+        res.status(401).json({
+          success: false,
+          message: 'Invalid email or password.',
+        });
+        return;
+      }
+
+      const isMatch = verifyPassword(String(password), user.password);
+      if (!isMatch) {
+        res.status(401).json({
+          success: false,
+          message: 'Invalid email or password.',
+        });
+        return;
+      }
+
+      user.lastLoginAt = new Date();
+      await user.save();
+
+      const token = jwt.sign(
+        {
+          id: user._id.toString(),
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          restaurantId: user.restaurantId,
+        },
+        config.jwt.secret,
+        { expiresIn: config.jwt.expiresIn } as jwt.SignOptions
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Signed in successfully.',
+        data: {
+          token,
+          user: {
+            id: user._id.toString(),
+            email: user.email,
+            phone: user.phone,
+            name: user.name,
+            role: user.role,
+            city: user.city || 'Dharan',
+            restaurantId: user.restaurantId,
+            termsAccepted: user.termsAccepted ?? true,
+            themePreference: user.themePreference || 'cream',
+            savedAddresses: user.savedAddresses || [],
+            createdAt: user.createdAt,
+          },
+        },
+      });
+    } catch (error: any) {
+      console.error('[AuthController.login] Error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Server error during sign in.',
+      });
+    }
+  }
+
   /**
    * POST /api/v1/auth/request-otp
    */
@@ -296,10 +488,12 @@ export class AuthController {
         data: {
           user: {
             id: user._id.toString(),
+            email: user.email,
             phone: user.phone,
             name: user.name,
             role: user.role,
             city: user.city || 'Dharan',
+            restaurantId: user.restaurantId,
             termsAccepted: user.termsAccepted ?? true,
             themePreference: user.themePreference || 'cream',
             savedAddresses: user.savedAddresses || [],

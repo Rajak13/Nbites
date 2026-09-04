@@ -6,6 +6,14 @@ import { authRateLimiter } from '../middleware/rateLimiter.middleware';
 const router = Router();
 
 // Public auth endpoints
+router.post('/register', authRateLimiter, (req, res) =>
+  authController.register(req, res)
+);
+
+router.post('/login', authRateLimiter, (req, res) =>
+  authController.login(req, res)
+);
+
 router.post('/request-otp', authRateLimiter, (req, res) =>
   authController.requestOtp(req, res)
 );
