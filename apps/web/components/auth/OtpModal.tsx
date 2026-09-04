@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { X, Phone, ShieldCheck, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth';
+import { getApiBaseUrl } from '@/lib/api-config';
 
 export function OtpModal() {
   const isOpen = useAuthStore((state) => state.isAuthModalOpen);
@@ -63,7 +64,7 @@ export function OtpModal() {
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+      const apiUrl = getApiBaseUrl();
       const res = await fetch(`${apiUrl}/auth/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,7 +131,7 @@ export function OtpModal() {
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+      const apiUrl = getApiBaseUrl();
       const cleanPhone = phone.replace(/\D/g, '');
       const res = await fetch(`${apiUrl}/auth/verify-otp`, {
         method: 'POST',

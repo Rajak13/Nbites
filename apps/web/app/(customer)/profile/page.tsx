@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore, SavedAddress } from '@/lib/auth';
 import { useTheme } from '@/components/common/ThemeProvider';
+import { getApiBaseUrl } from '@/lib/api-config';
 
 interface OrderHistoryItem {
   id: string;
@@ -71,7 +72,7 @@ export default function ProfilePage() {
     async function fetchOrders() {
       setIsLoadingOrders(true);
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+        const apiUrl = getApiBaseUrl();
         const res = await fetch(`${apiUrl}/auth/my-orders`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -96,7 +97,7 @@ export default function ProfilePage() {
     setIsSavingName(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+      const apiUrl = getApiBaseUrl();
       const res = await fetch(`${apiUrl}/auth/me`, {
         method: 'PATCH',
         headers: {
@@ -134,7 +135,7 @@ export default function ProfilePage() {
     ];
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+      const apiUrl = getApiBaseUrl();
       const res = await fetch(`${apiUrl}/auth/me`, {
         method: 'PATCH',
         headers: {
@@ -163,7 +164,7 @@ export default function ProfilePage() {
     const updated = user.savedAddresses.filter((_, idx) => idx !== index);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+      const apiUrl = getApiBaseUrl();
       await fetch(`${apiUrl}/auth/me`, {
         method: 'PATCH',
         headers: {

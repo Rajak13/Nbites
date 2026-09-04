@@ -12,6 +12,7 @@ import {
   Bike,
   Clock,
 } from 'lucide-react';
+import { getApiBaseUrl } from '@/lib/api-config';
 
 // ─── State Machine ────────────────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ export default function OrderTrackingPage() {
       try { setReceipt(JSON.parse(stored)); } catch { /* ignore */ }
     }
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+    const apiUrl = getApiBaseUrl();
     fetch(`${apiUrl}/orders/${orderId}`)
       .then((r) => r.ok ? r.json() : null)
       .then((json) => {

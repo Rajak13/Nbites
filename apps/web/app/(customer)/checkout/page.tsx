@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 import { useAuthStore } from '@/lib/auth';
+import { getApiBaseUrl } from '@/lib/api-config';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -84,7 +85,7 @@ export default function CheckoutPage() {
     const generatedFallbackId = `ORD-KTM-${Math.floor(1000 + Math.random() * 9000)}`;
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+      const apiUrl = getApiBaseUrl();
 
       const payload = {
         customerPhone: activePhone.replace(/\D/g, ''),

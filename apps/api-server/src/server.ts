@@ -20,7 +20,19 @@ const server = http.createServer(app);
 app.use(helmet());
 app.use(
   cors({
-    origin: [config.corsOrigin, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, server-to-server, mobile)
+      if (!origin) return callback(null, true);
+      if (
+        origin.endsWith('.vercel.app') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin === config.corsOrigin
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Allow client requests
+    },
     credentials: true,
   })
 );
@@ -32,12 +44,14 @@ app.use(morgan(config.nodeEnv === 'development' ? 'dev' : 'combined'));
 app.use('/api/', apiRateLimiter);
 
 // -----------------------------------------------------------------------------
-// Routes
+// Routes (Mount at /api/v1, /api, and / for full URL compatibility)
 // -----------------------------------------------------------------------------
 app.use('/api/v1', apiRouter);
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
 // Root Status
-app.get('/', (_req, res) => {
+app.get('/status', (_req, res) => {
   res.json({
     service: 'nBites Real-Time Backend API',
     version: '1.0.0',

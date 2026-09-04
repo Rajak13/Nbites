@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { getApiBaseUrl } from '@/lib/api-config';
 
 export interface SavedAddress {
   label: string;
@@ -93,7 +94,7 @@ export const useAuthStore = create<AuthState>()(
         if (!token) return;
 
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+          const apiUrl = getApiBaseUrl();
           const res = await fetch(`${apiUrl}/auth/me`, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -122,7 +123,7 @@ export const useAuthStore = create<AuthState>()(
 
         if (token) {
           try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+            const apiUrl = getApiBaseUrl();
             await fetch(`${apiUrl}/auth/me`, {
               method: 'PATCH',
               headers: {

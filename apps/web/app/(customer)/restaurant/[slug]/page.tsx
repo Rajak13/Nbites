@@ -18,6 +18,7 @@ import {
   ItemCustomizationModal,
   MenuItemDetail,
 } from '@/components/menu/ItemCustomizationModal';
+import { getApiBaseUrl } from '@/lib/api-config';
 
 interface RestaurantDetails {
   id: string;
@@ -209,7 +210,7 @@ export default function RestaurantDetailPage() {
   React.useEffect(() => {
     async function loadRestaurant() {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+        const apiUrl = getApiBaseUrl();
         const res = await fetch(`${apiUrl}/restaurants/${slug}`, { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();

@@ -4,6 +4,7 @@ import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight, Search, MapPin, Clock, Star } from 'lucide-react';
+import { getApiBaseUrl } from '@/lib/api-config';
 
 interface KitchenItem {
   id: string;
@@ -84,7 +85,7 @@ export default function DiscoveryPage() {
   React.useEffect(() => {
     async function loadKitchens() {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+        const apiUrl = getApiBaseUrl();
         const res = await fetch(`${apiUrl}/restaurants`, { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
