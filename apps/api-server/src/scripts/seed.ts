@@ -1,0 +1,295 @@
+import { connectDatabase, disconnectDatabase } from '../config/db';
+import { Restaurant, Driver } from '../models';
+
+async function seed() {
+  console.log('🌱 [Seed] Starting Kathmandu Valley database seeding...');
+
+  await connectDatabase();
+
+  try {
+    // 1. Clear existing restaurants and drivers
+    await Restaurant.deleteMany({});
+    await Driver.deleteMany({});
+    console.log('🧹 [Seed] Cleared existing restaurants and drivers');
+
+    // 2. Insert 3 authentic partner kitchens
+    const kitchens = [
+      {
+        name: 'Kathmandu Himalayan Grill',
+        slug: 'himalayan-grill-jhamsikhel',
+        tagline: 'Wood-fired sekuwa, Himalayan timur marinades & artisan momo crafts.',
+        description:
+          'Specialty smokehouse and momo guild operating in the heart of Jhamsikhel with synchronized kitchen telemetry.',
+        coverImage: '/foods/1.jpg',
+        address: 'Restaurant Lane, Ward 3, Jhamsikhel',
+        zone: 'Jhamsikhel',
+        city: 'Lalitpur',
+        phone: '+977 1 5521000',
+        isOpen: true,
+        isBusy: false,
+        rating: 4.9,
+        reviewCount: 482,
+        estimatedPrepTimeMins: 18,
+        deliveryFeeBase: 50,
+        location: {
+          type: 'Point',
+          coordinates: [85.3168, 27.6784], // [lng, lat] Jhamsikhel
+        },
+        categories: [
+          {
+            id: 'momos',
+            name: 'ARTISAN MOMOS',
+            sortOrder: 1,
+            items: [
+              {
+                id: 'momo-1',
+                name: 'Smoked Timur Buff Jhol Momo',
+                description:
+                  'Hand-pinched water buffalo dumplings submerged in roasted sesame, soybean, and wild timur pepper broth.',
+                basePrice: 280,
+                image: '/foods/main.jpg',
+                isVeg: false,
+                isSpicy: true,
+                prepTime: '14 mins',
+                isAvailable: true,
+                groups: [
+                  {
+                    id: 'prep-style',
+                    title: 'Preparation Style',
+                    type: 'single',
+                    required: true,
+                    options: [
+                      { id: 'steamed', name: 'Steamed in Bamboo', price: 0 },
+                      { id: 'fried', name: 'Deep Golden Fried', price: 30 },
+                      { id: 'kothey', name: 'Pan-Seared Kothey', price: 40 },
+                      { id: 'c-momo', name: 'Wok Chilli (C-Momo)', price: 60 },
+                    ],
+                  },
+                  {
+                    id: 'addons',
+                    title: 'Artisan Dips & Add-ons',
+                    type: 'multi',
+                    required: false,
+                    options: [
+                      { id: 'extra-jhol', name: 'Extra Spiced Jhol Achar', price: 30 },
+                      { id: 'dalle-paste', name: 'Mountain Dalle Paste', price: 25 },
+                      { id: 'melted-cheese', name: 'Smoked Yak Cheese Melt', price: 65 },
+                    ],
+                  },
+                ],
+              },
+              {
+                id: 'momo-2',
+                name: 'Kothey Chicken Dumplings',
+                description:
+                  'Crispy pan-bottom chicken dumplings with scallions, minced ginger, and mild coriander butter.',
+                basePrice: 260,
+                image: '/foods/4.jpg',
+                isVeg: false,
+                prepTime: '12 mins',
+                isAvailable: true,
+                groups: [
+                  {
+                    id: 'prep-style',
+                    title: 'Preparation Style',
+                    type: 'single',
+                    required: true,
+                    options: [
+                      { id: 'kothey', name: 'Pan-Seared Kothey', price: 0 },
+                      { id: 'steamed', name: 'Steamed Classic', price: 0 },
+                      { id: 'c-momo', name: 'Spicy Chilli Glaze', price: 50 },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'sekuwa',
+            name: 'FIRE-ROASTED SEKUWA',
+            sortOrder: 2,
+            items: [
+              {
+                id: 'sekuwa-1',
+                name: 'Smoked Timur Pork Sekuwa',
+                description:
+                  'Charcoal-roasted pork belly marinated for 18 hours in mustard oil, mountain timur, and crushed green chillies.',
+                basePrice: 520,
+                image: '/foods/2.jpg',
+                isVeg: false,
+                isSpicy: true,
+                prepTime: '18 mins',
+                isAvailable: true,
+                groups: [
+                  {
+                    id: 'sides',
+                    title: 'Select Accompaniment',
+                    type: 'single',
+                    required: true,
+                    options: [
+                      { id: 'chiura', name: 'Crispy Baji (Chiura) & Achar', price: 0 },
+                      { id: 'pulao', name: 'Basmati Spiced Pulao', price: 60 },
+                      { id: 'furandana', name: 'Spiced Furandana Crunch', price: 20 },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'bowls',
+            name: 'FIRED NOODLE BOWLS',
+            sortOrder: 3,
+            items: [
+              {
+                id: 'bowl-1',
+                name: 'Kathmandu Highland Chili Thukpa',
+                description:
+                  'Hand-pulled wheat noodles in slow-simmered bone broth with charred greens, garlic oil, and chili crunch.',
+                basePrice: 380,
+                image: '/foods/3.jpg',
+                isVeg: false,
+                isSpicy: true,
+                prepTime: '15 mins',
+                isAvailable: true,
+                groups: [
+                  {
+                    id: 'spice-level',
+                    title: 'Heat Level',
+                    type: 'single',
+                    required: true,
+                    options: [
+                      { id: 'medium', name: 'Valley Mild (Normal)', price: 0 },
+                      { id: 'hot', name: 'Spicy Timur Fire', price: 0 },
+                      { id: 'dalle-extreme', name: 'Mountain Dalle Extreme', price: 30 },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: 'Old Town Newari Kitchen',
+        slug: 'old-town-newari-kitchen',
+        tagline: 'Centuries-old heritage Newari recipes from the historic alleys of Patan.',
+        description: 'Authentic Samay Baji, smoked Choila, and traditional stone-ground Newari delicacies.',
+        coverImage: '/foods/main.jpg',
+        address: 'Mangalbazar Durbar Square, Patan',
+        zone: 'Patan Durbar',
+        city: 'Lalitpur',
+        phone: '+977 1 5532000',
+        isOpen: true,
+        isBusy: false,
+        rating: 4.8,
+        reviewCount: 340,
+        estimatedPrepTimeMins: 20,
+        deliveryFeeBase: 50,
+        location: {
+          type: 'Point',
+          coordinates: [85.326, 27.6727], // [lng, lat] Patan Durbar
+        },
+        categories: [
+          {
+            id: 'newari-sets',
+            name: 'HERITAGE SAMAY BAJI',
+            sortOrder: 1,
+            items: [
+              {
+                id: 'samay-1',
+                name: 'Royal Buff Choila Samay Baji Set',
+                description:
+                  'Charcoal-smoked water buffalo meat seasoned with mustard oil and fenugreek, served with beaten rice, black soybean, ginger, and spicy potato salad.',
+                basePrice: 420,
+                image: '/foods/main.jpg',
+                isVeg: false,
+                isSpicy: true,
+                prepTime: '15 mins',
+                isAvailable: true,
+                groups: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: 'Artisan Wood Fired Co.',
+        slug: 'artisan-wood-fired-baluwatar',
+        tagline: 'Slow-fermented 72-hour sourdough pizzas baked at 450°C.',
+        description: 'Artisan wood-fired bakery and sourdough pizza house in Baluwatar.',
+        coverImage: '/foods/3.jpg',
+        address: 'Speaker Marg, Baluwatar',
+        zone: 'Baluwatar',
+        city: 'Kathmandu',
+        phone: '+977 1 4415000',
+        isOpen: true,
+        isBusy: false,
+        rating: 4.9,
+        reviewCount: 512,
+        estimatedPrepTimeMins: 22,
+        deliveryFeeBase: 50,
+        location: {
+          type: 'Point',
+          coordinates: [85.3312, 27.7258], // [lng, lat] Baluwatar
+        },
+        categories: [
+          {
+            id: 'sourdough-pizza',
+            name: 'SOURDOUGH PIZZA (12")',
+            sortOrder: 1,
+            items: [
+              {
+                id: 'pizza-1',
+                name: 'Artisan Pepperoni & Wild Timur Sourdough',
+                description:
+                  'San Marzano tomato base, smoked mozzarella, spicy beef pepperoni, drizzled with local honey and crushed timur.',
+                basePrice: 750,
+                image: '/foods/3.jpg',
+                isVeg: false,
+                isSpicy: false,
+                prepTime: '18 mins',
+                isAvailable: true,
+                groups: [],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const createdKitchens = await Restaurant.insertMany(kitchens);
+    console.log(`✅ [Seed] Inserted ${createdKitchens.length} partner kitchens`);
+
+    // 3. Insert 1 mock active express driver
+    const driver = await Driver.create({
+      driverId: 'drv-ktm-1',
+      name: 'Bikash Maharjan',
+      phone: '+977 9841234567',
+      vehiclePlate: 'BA 89 PA 4321',
+      vehicleType: 'Motorbike (Hero Splendor)',
+      isOnline: true,
+      rating: 4.95,
+      totalTrips: 1240,
+      location: {
+        type: 'Point',
+        coordinates: [85.3175, 27.679], // Jhamsikhel
+      },
+    });
+    console.log(`✅ [Seed] Inserted mock active express rider: ${driver.name} (${driver.vehiclePlate})`);
+
+    console.log('====================================================');
+    console.log('🎉 [Seed] Kathmandu Valley database seeding complete!');
+    console.log('====================================================');
+  } catch (error) {
+    console.error('❌ [Seed] Error seeding database:', error);
+    throw error;
+  } finally {
+    await disconnectDatabase();
+  }
+}
+
+seed().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { dispatchService, DriverCandidate } from '../services/dispatch.service';
 import { isWithinServiceRadius } from '../utils/geo.utils';
+import { Driver } from '../models/driver.model';
 
 // Kathmandu Valley mock active rider fleet for geospatial calculation
 const ACTIVE_KTM_DRIVERS: DriverCandidate[] = [
@@ -70,9 +71,27 @@ export class DispatchController {
         }
       }
 
+      // Fetch real online drivers from MongoDB Atlas
+      const dbDrivers = await Driver.find({ isOnline: true }).lean();
+      const driverCandidates: DriverCandidate[] =
+        dbDrivers.length > 0
+          ? dbDrivers.map((d) => ({
+              driverId: d.driverId,
+              name: d.name,
+              phone: d.phone,
+              vehiclePlate: d.vehiclePlate,
+              coords: {
+                lat: d.location.coordinates[1],
+                lng: d.location.coordinates[0],
+              },
+              rating: d.rating,
+              isOnline: d.isOnline,
+            }))
+          : ACTIVE_KTM_DRIVERS;
+
       const match = dispatchService.findNearestDriver(
         pickupCoords,
-        ACTIVE_KTM_DRIVERS
+        driverCandidates
       );
 
       if (!match) {

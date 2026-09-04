@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { esewaService } from '../services/esewa.service';
 import { khaltiService } from '../services/khalti.service';
 import { config } from '../config/env';
+import { Order } from '../models/order.model';
 
 export class PaymentController {
   /**
@@ -70,9 +71,32 @@ export class PaymentController {
         return;
       }
 
+      // Reconcile order in MongoDB
+      const payload = verification.decodedPayload;
+      const txUuid =
+        typeof payload.transaction_uuid === 'string' ? payload.transaction_uuid : '';
+
+      if (txUuid) {
+        await Order.findOneAndUpdate(
+          {
+            $or: [
+              { 'payment.transactionUuid': txUuid },
+              { orderNumber: txUuid.split('-')[0] },
+            ],
+          },
+          {
+            $set: {
+              'payment.status': 'PAID',
+              'payment.gatewayRefId': String(payload.ref_id || payload.transaction_code || ''),
+              status: 'ACCEPTED',
+            },
+          }
+        );
+      }
+
       res.json({
         success: true,
-        message: 'eSewa payment successfully verified',
+        message: 'eSewa payment successfully verified and order marked as ACCEPTED.',
         data: verification.decodedPayload,
       });
     } catch (error: unknown) {
@@ -133,7 +157,7 @@ export class PaymentController {
    */
   public async verifyKhalti(req: Request, res: Response): Promise<void> {
     try {
-      const { pidx } = req.body;
+      const { pidx, orderNumber } = req.body;
 
       if (!pidx) {
         res.status(400).json({
@@ -145,8 +169,29 @@ export class PaymentController {
 
       const lookupResult = await khaltiService.verifyPayment(pidx);
 
+      // If status is Completed, reconcile in MongoDB
+      if (lookupResult && lookupResult.status === 'Completed') {
+        await Order.findOneAndUpdate(
+          {
+            $or: [
+              { 'payment.gatewayRefId': pidx },
+              { 'payment.transactionUuid': pidx },
+              ...(orderNumber ? [{ orderNumber: String(orderNumber) }] : []),
+            ],
+          },
+          {
+            $set: {
+              'payment.status': 'PAID',
+              'payment.gatewayRefId': lookupResult.transaction_id || pidx,
+              status: 'ACCEPTED',
+            },
+          }
+        );
+      }
+
       res.json({
         success: true,
+        message: 'Khalti payment successfully verified and order marked as ACCEPTED.',
         data: lookupResult,
       });
     } catch (error: unknown) {

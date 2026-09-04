@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { Server as SocketIOServer } from 'socket.io';
 import { config } from './config/env';
+import { connectDatabase } from './config/db';
 import apiRouter from './routes';
 import { apiRateLimiter } from './middleware/rateLimiter.middleware';
 import { registerKDSSocket } from './sockets/kds.socket';
@@ -65,14 +66,27 @@ registerDriverSocket(io);
 // -----------------------------------------------------------------------------
 const PORT = config.port;
 
-server.listen(PORT, () => {
-  console.log('====================================================');
-  console.log(`🚀 nBites API Server running on port ${PORT}`);
-  console.log(`🌐 HTTP URL:    http://localhost:${PORT}`);
-  console.log(`⚡ WebSocket:   ws://localhost:${PORT}`);
-  console.log(`🔥 Environment: ${config.nodeEnv}`);
-  console.log('====================================================');
-});
+async function startServer() {
+  try {
+    // 1. Establish MongoDB connection
+    await connectDatabase();
+
+    // 2. Start HTTP & WebSocket server
+    server.listen(PORT, () => {
+      console.log('====================================================');
+      console.log(`🚀 nBites API Server running on port ${PORT}`);
+      console.log(`🌐 HTTP URL:    http://localhost:${PORT}`);
+      console.log(`⚡ WebSocket:   ws://localhost:${PORT}`);
+      console.log(`🔥 Environment: ${config.nodeEnv}`);
+      console.log('====================================================');
+    });
+  } catch (error) {
+    console.error('❌ Fatal error during server startup:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 // Graceful Shutdown
 process.on('SIGTERM', () => {

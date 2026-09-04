@@ -7,6 +7,8 @@ export const config = {
   port: parseInt(process.env.PORT || '4000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  mongodbUri:
+    process.env.MONGODB_URI || 'mongodb://localhost:27017/nbites',
   jwt: {
     secret: process.env.JWT_SECRET || 'nbites-super-secret-jwt-key-2026',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
